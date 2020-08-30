@@ -55,7 +55,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _subscriptions = mutableListOf<Any>()
     private var _scanJob: Job? = null
-    private var connectedDevice: BluetoothGatt? = null
 
     val state: LiveData<State>
         get() = _state
@@ -64,7 +63,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return bluetoothLeScanner?.let { scanner ->
             _subscriptions.add(key)
 
-            if (checkPermission() && connectedDevice == null) {
+            if (checkPermission()) {
                 startWork(scanner)
             }
 
