@@ -38,7 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else if (!checkPermission()) {
                 value = State.NoPermission
             } else {
-                value = State.Scanning
+                value = State.Idle
             }
         }
     }
@@ -70,7 +70,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (checkPermission()) {
             bluetoothLeScanner?.let { scanner ->
                 startScan(scanner)
-                _state.value = State.Scanning
             }
         }
     }
@@ -89,6 +88,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
                 .build()
         scanner.startScan(listOf(filter), settings, callback)
+
+        _state.value = State.Scanning
     }
 
     private fun tryToStop() {
@@ -96,6 +97,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         connectedDevice = null
 
         bluetoothLeScanner?.stopScan(callback)
+
+        if (checkPermission()) _state.value = State.Idle
     }
 
     private fun checkPermission(): Boolean {
