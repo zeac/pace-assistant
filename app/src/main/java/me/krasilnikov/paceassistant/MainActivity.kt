@@ -7,7 +7,6 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Box
 import androidx.compose.foundation.Text
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -34,19 +33,13 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             PaceTheme {
-                if (!viewModel.bluetoothAvailable) {
-                    noBluetooth()
-                    return@PaceTheme
-                }
+                val state by viewModel.state.observeAsState()
 
-                val permission by viewModel.permission.observeAsState()
-                if (permission == false) {
-                    noPermission()
-                    return@PaceTheme
+                when (val s = state) {
+                    State.NoBluetooth -> noBluetooth()
+                    State.NoPermission -> noPermission()
+                    is State.Heartbeat -> showHeartbeat(s.beat)
                 }
-
-                val beat by viewModel.heartbeat.observeAsState()
-                showHeartbeat(beat ?: 0)
             }
         }
     }

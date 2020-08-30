@@ -28,27 +28,26 @@ import java.util.UUID
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _heartbeat = MutableLiveData<Int>()
-    private val _permission = object : MutableLiveData<Boolean>() {
+    private val bluetoothLeScanner: BluetoothLeScanner? =
+        (application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
+
+    private val _state = object : MutableLiveData<State>() {
         override fun onActive() {
-            value = checkPermission()
+            if (bluetoothLeScanner == null) {
+                value = State.NoBluetooth
+            } else if (!checkPermission()) {
+                value = State.NoPermission
+            } else {
+                value = State.Scanning
+            }
         }
     }
 
     private val _subscriptions = mutableListOf<Any>()
-
-    private val bluetoothLeScanner: BluetoothLeScanner? =
-        (application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
     private var connectedDevice: BluetoothGatt? = null
 
-    val heartbeat: LiveData<Int>
-        get() = _heartbeat
-
-    val permission: LiveData<Boolean>
-        get() = _permission
-
-    val bluetoothAvailable
-        get() = bluetoothLeScanner != null
+    val state: LiveData<State>
+        get() = _state
 
     fun subscribe(key: Any): AutoCloseable? {
         return bluetoothLeScanner?.let { scanner ->
@@ -71,8 +70,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (checkPermission()) {
             bluetoothLeScanner?.let { scanner ->
                 startScan(scanner)
+                _state.value = State.Scanning
             }
-            _permission.value = true
         }
     }
 
@@ -180,7 +179,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (flag and 0x8 == 1) offset += 2
 
             Log.e("Pace", "${flag.toString(16)} $hr")
-            _heartbeat.postValue(hr)
+            _state.postValue(State.Heartbeat(hr))
 
             val size = characteristic.value.size
             while (offset < size) {
