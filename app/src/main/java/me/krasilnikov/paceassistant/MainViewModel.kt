@@ -43,12 +43,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = object : MutableLiveData<State>() {
         override fun onActive() {
-            if (bluetoothLeScanner == null) {
-                value = State.NoBluetooth
+            value = if (bluetoothLeScanner == null) {
+                State.NoBluetooth
             } else if (!checkPermission()) {
-                value = State.NoPermission
+                State.NoPermission
             } else {
-                value = State.Idle
+                State.Idle
             }
         }
     }
@@ -187,7 +187,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     _state.value = State.Heartbeat(hr)
                 }
-                
+
                 _state.value = State.Idle
             } finally {
                 require(_threadCheck.isValid)
