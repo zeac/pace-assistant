@@ -1,7 +1,10 @@
 package me.krasilnikov.paceassistant
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val Purple200 = Color(0xFFBB86FC)
@@ -27,3 +30,13 @@ val lightPalette = lightColors(
     secondary = Teal200,
     onSecondary = Color.Black,
 )
+
+@Composable
+fun PaceTheme(
+    content: @Composable () -> Unit
+) {
+    MaterialTheme(
+        colors = if (isSystemInDarkTheme()) darkPalette else lightPalette,
+        content = content
+    )
+}

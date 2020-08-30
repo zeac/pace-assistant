@@ -33,18 +33,16 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
 
         setContent {
-            MaterialTheme(
-                colors = if (isSystemInDarkTheme()) darkPalette else lightPalette,
-            ) {
+            PaceTheme {
                 if (!viewModel.bluetoothAvailable) {
                     noBluetooth()
-                    return@MaterialTheme
+                    return@PaceTheme
                 }
 
                 val permission by viewModel.permission.observeAsState()
                 if (permission == false) {
                     noPermission()
-                    return@MaterialTheme
+                    return@PaceTheme
                 }
 
                 val beat by viewModel.heartbeat.observeAsState()
