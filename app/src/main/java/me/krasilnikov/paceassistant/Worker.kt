@@ -1,7 +1,6 @@
 package me.krasilnikov.paceassistant
 
 import android.Manifest
-import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -21,7 +20,6 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Job
@@ -33,13 +31,14 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
 import kotlin.coroutines.resume
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+object Worker {
 
+    private val _context = PaceApplication.instance
     private val _threadCheck = ThreadChecker()
     private val _coroutineScope = MainScope()
 
     private val bluetoothLeScanner: BluetoothLeScanner? =
-        (application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
+        (_context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
 
     private val _state = object : MutableLiveData<State>() {
         override fun onActive() {
@@ -84,10 +83,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    override fun onCleared() {
-        require(_subscriptions.isEmpty())
-    }
-
     private fun startWork(scanner: BluetoothLeScanner) {
         require(_threadCheck.isValid)
         require(_subscriptions.isNotEmpty())
@@ -95,7 +90,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         if (_scanJob != null) return
 
-        val application = getApplication<Application>()
         _scanJob = _coroutineScope.launch {
             require(_threadCheck.isValid)
 
@@ -104,6 +98,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val device = scanForResult(scanner)
 
             val channel = Channel<Int>(CONFLATED)
+
             class GattCallback : BluetoothGattCallback() {
                 override fun onConnectionStateChange(
                     gatt: BluetoothGatt,
@@ -179,7 +174,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
-            val gatt = device.connectGatt(application, false, GattCallback ())
+
+            val gatt = device.connectGatt(_context, false, GattCallback())
             try {
                 for (hr in channel) {
                     require(_threadCheck.isValid)
@@ -209,8 +205,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getApplication<Application>()
-                .checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            _context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
@@ -248,15 +243,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    companion object {
-        const val CLIENT_CHARACTERISTIC_CONFIGURATION = "00002902-0000-1000-8000-00805f9b34fb"
+    const val CLIENT_CHARACTERISTIC_CONFIGURATION = "00002902-0000-1000-8000-00805f9b34fb"
 
-        const val HEART_RATE_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb"
-        const val HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+    const val HEART_RATE_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb"
+    const val HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
 
-        const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
-        const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
+    const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
+    const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
 
-        const val TAG = "Pace"
-    }
+    const val TAG = "Pace"
 }

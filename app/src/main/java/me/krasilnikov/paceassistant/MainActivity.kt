@@ -17,23 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
 import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var viewModel: MainViewModel
     private var subscription: AutoCloseable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
-
         setContent {
             PaceTheme {
-                val state by viewModel.state.observeAsState()
+                val state by Worker.state.observeAsState()
 
                 when (val s = state) {
                     State.NoBluetooth -> noBluetooth()
@@ -47,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        subscription = viewModel.subscribe(this)
+        subscription = Worker.subscribe(this)
     }
 
     override fun onStop() {
@@ -65,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        viewModel.updatePermission()
+        Worker.updatePermission()
     }
 
     @Composable
