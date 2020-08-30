@@ -34,6 +34,8 @@ android {
         jvmTarget = '1.8'
         allWarningsAsErrors = true
         useIR = true
+
+        freeCompilerArgs += '-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi'
     }
 
     buildFeatures {

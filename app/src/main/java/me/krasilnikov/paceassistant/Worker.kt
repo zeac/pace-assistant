@@ -22,80 +22,85 @@ import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
 import kotlin.coroutines.resume
+import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
 object Worker {
 
     private val _context = PaceApplication.instance
     private val _threadCheck = ThreadChecker()
-    private val _coroutineScope = MainScope()
+    private val _coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
 
-    private val bluetoothLeScanner: BluetoothLeScanner? =
-        (_context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
-
-    private val _state = object : MutableLiveData<State>() {
-        override fun onActive() {
-            value = if (bluetoothLeScanner == null) {
-                State.NoBluetooth
-            } else if (!checkPermission()) {
-                State.NoPermission
-            } else {
-                State.Idle
-            }
-        }
-    }
+    private val _state = MutableLiveData<State>()
 
     private val _subscriptions = mutableListOf<Any>()
-    private var _scanJob: Job? = null
+    private val _subscriptionsChanged = Channel<Unit>(CONFLATED)
+    private val _permissionsChanged = Channel<Unit>(CONFLATED)
 
     val state: LiveData<State>
         get() = _state
 
+    init {
+        _coroutineScope.launch { work() }
+    }
+
     fun subscribe(key: Any): AutoCloseable? {
-        return bluetoothLeScanner?.let { scanner ->
-            _subscriptions.add(key)
+        _subscriptions.add(key)
+        _subscriptionsChanged.offer(Unit)
 
-            if (checkPermission()) {
-                startWork(scanner)
-            }
-
-            AutoCloseable {
-                _subscriptions.remove(key)
-                tryToStop()
-            }
+        return AutoCloseable {
+            _subscriptions.remove(key)
+            _subscriptionsChanged.offer(Unit)
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
     @MainThread
     fun updatePermission() {
-        if (checkPermission()) {
-            bluetoothLeScanner?.let { scanner ->
-                startWork(scanner)
-            }
-        }
+        _permissionsChanged.offer(Unit)
     }
 
-    private fun startWork(scanner: BluetoothLeScanner) {
+    private suspend fun work() {
         require(_threadCheck.isValid)
-        require(_subscriptions.isNotEmpty())
-        require(checkPermission())
 
-        if (_scanJob != null) return
+        val bluetoothLeScanner: BluetoothLeScanner? =
+            (_context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
 
-        _scanJob = _coroutineScope.launch {
-            require(_threadCheck.isValid)
+        if (bluetoothLeScanner == null) {
+            _state.value = State.NoBluetooth
+            return
+        }
 
-            _state.value = State.Scanning
+        while (true) {
+            val havePermission = checkPermission()
+            _state.value = if (havePermission) State.Scanning else State.NoPermission
 
-            val device = scanForResult(scanner)
+            if (_subscriptions.isEmpty() || !havePermission) {
+                select<Unit> {
+                    _subscriptionsChanged.onReceive {
+                        require(_threadCheck.isValid)
+                    }
+                    _permissionsChanged.onReceive {
+                        require(_threadCheck.isValid)
+                    }
+                }
+                continue
+            }
+
+            val device = select<BluetoothDevice?> {
+                _subscriptionsChanged.onReceive { null }
+                _coroutineScope.async { scanForResult(bluetoothLeScanner) }.onAwait { it }
+            } ?: continue
 
             val channel = Channel<Int>(CONFLATED)
 
@@ -177,29 +182,29 @@ object Worker {
 
             val gatt = device.connectGatt(_context, false, GattCallback())
             try {
-                for (hr in channel) {
-                    require(_threadCheck.isValid)
+                whileSelect {
+                    _subscriptionsChanged.onReceive {
+                        require(_threadCheck.isValid)
 
-                    _state.value = State.Heartbeat(hr)
+                        _subscriptions.isNotEmpty()
+                    }
+
+                    channel.onReceiveOrNullExt().invoke { hr ->
+                        require(_threadCheck.isValid)
+
+                        if (hr != null) {
+                            _state.value = State.Heartbeat(hr)
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
-
-                _state.value = State.Idle
             } finally {
                 require(_threadCheck.isValid)
 
                 gatt.close()
             }
-        }
-    }
-
-    private fun tryToStop() {
-        require(_threadCheck.isValid)
-
-        if (_scanJob != null) {
-            _scanJob?.cancel()
-            _scanJob = null
-
-            _state.value = State.Idle
         }
     }
 

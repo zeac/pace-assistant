@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
                     State.NoBluetooth -> noBluetooth()
                     State.NoPermission -> noPermission()
                     is State.Heartbeat -> showHeartbeat(s.beat)
+                    null -> throw IllegalStateException()
                 }
             }
         }
