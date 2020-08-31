@@ -38,44 +38,44 @@ import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
 object Worker {
 
-    private val _context = PaceApplication.instance
-    private val _threadCheck = ThreadChecker()
-    private val _coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
+    private val context = PaceApplication.instance
+    private val threadCheck = ThreadChecker()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
 
     private val _state = MutableLiveData<State>()
 
-    private val _subscriptions = mutableListOf<Any>()
-    private val _subscriptionsChanged = Channel<Unit>(CONFLATED)
-    private val _permissionsChanged = Channel<Unit>(CONFLATED)
+    private val subscriptions = mutableListOf<Any>()
+    private val subscriptionsChanged = Channel<Unit>(CONFLATED)
+    private val permissionsChanged = Channel<Unit>(CONFLATED)
 
     val state: LiveData<State>
         get() = _state
 
     init {
-        _coroutineScope.launch { work() }
+        coroutineScope.launch { work() }
     }
 
     fun subscribe(key: Any): AutoCloseable? {
-        _subscriptions.add(key)
-        _subscriptionsChanged.offer(Unit)
+        subscriptions.add(key)
+        subscriptionsChanged.offer(Unit)
 
         return AutoCloseable {
-            _subscriptions.remove(key)
-            _subscriptionsChanged.offer(Unit)
+            subscriptions.remove(key)
+            subscriptionsChanged.offer(Unit)
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
     @MainThread
     fun updatePermission() {
-        _permissionsChanged.offer(Unit)
+        permissionsChanged.offer(Unit)
     }
 
     private suspend fun work() {
-        require(_threadCheck.isValid)
+        require(threadCheck.isValid)
 
         val bluetoothLeScanner: BluetoothLeScanner? =
-            (_context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
+            (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
 
         if (bluetoothLeScanner == null) {
             _state.value = State.NoBluetooth
@@ -86,21 +86,21 @@ object Worker {
             val havePermission = checkPermission()
             _state.value = if (havePermission) State.Scanning else State.NoPermission
 
-            if (_subscriptions.isEmpty() || !havePermission) {
+            if (subscriptions.isEmpty() || !havePermission) {
                 select<Unit> {
-                    _subscriptionsChanged.onReceive {
-                        require(_threadCheck.isValid)
+                    subscriptionsChanged.onReceive {
+                        require(threadCheck.isValid)
                     }
-                    _permissionsChanged.onReceive {
-                        require(_threadCheck.isValid)
+                    permissionsChanged.onReceive {
+                        require(threadCheck.isValid)
                     }
                 }
                 continue
             }
 
-            val scanJob = _coroutineScope.async { scanForResult(bluetoothLeScanner) }
+            val scanJob = coroutineScope.async { scanForResult(bluetoothLeScanner) }
             val device = select<BluetoothDevice?> {
-                _subscriptionsChanged.onReceive {
+                subscriptionsChanged.onReceive {
                     scanJob.cancelAndJoin()
                     null
                 }
@@ -185,17 +185,17 @@ object Worker {
                 }
             }
 
-            val gatt = device.connectGatt(_context, false, GattCallback())
+            val gatt = device.connectGatt(context, false, GattCallback())
             try {
                 whileSelect {
-                    _subscriptionsChanged.onReceive {
-                        require(_threadCheck.isValid)
+                    subscriptionsChanged.onReceive {
+                        require(threadCheck.isValid)
 
-                        _subscriptions.isNotEmpty()
+                        subscriptions.isNotEmpty()
                     }
 
                     channel.onReceiveOrNullExt().invoke { hr ->
-                        require(_threadCheck.isValid)
+                        require(threadCheck.isValid)
 
                         if (hr != null) {
                             _state.value = State.Heartbeat(hr)
@@ -206,7 +206,7 @@ object Worker {
                     }
                 }
             } finally {
-                require(_threadCheck.isValid)
+                require(threadCheck.isValid)
 
                 gatt.close()
             }
@@ -215,19 +215,19 @@ object Worker {
 
     private fun checkPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            _context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
     }
 
     private suspend fun scanForResult(scanner: BluetoothLeScanner): BluetoothDevice {
-        require(_threadCheck.isValid)
+        require(threadCheck.isValid)
 
         return suspendCancellableCoroutine { invocation ->
             val callback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult?) {
-                    require(_threadCheck.isValid)
+                    require(threadCheck.isValid)
 
                     if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
                     if (result == null) return
@@ -246,7 +246,7 @@ object Worker {
             scanner.startScan(listOf(filter), settings, callback)
 
             invocation.invokeOnCancellation {
-                require(_threadCheck.isValid)
+                require(threadCheck.isValid)
 
                 scanner.stopScan(callback)
             }
