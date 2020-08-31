@@ -25,6 +25,7 @@ import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.launch
@@ -97,9 +98,13 @@ object Worker {
                 continue
             }
 
+            val scanJob = _coroutineScope.async { scanForResult(bluetoothLeScanner) }
             val device = select<BluetoothDevice?> {
-                _subscriptionsChanged.onReceive { null }
-                _coroutineScope.async { scanForResult(bluetoothLeScanner) }.onAwait { it }
+                _subscriptionsChanged.onReceive {
+                    scanJob.cancelAndJoin()
+                    null
+                }
+                scanJob.onAwait { it }
             } ?: continue
 
             val channel = Channel<Int>(CONFLATED)
