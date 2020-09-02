@@ -14,12 +14,15 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +39,7 @@ import java.util.UUID
 import kotlin.coroutines.resume
 import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
+@MainThread
 object Worker {
 
     private val context = PaceApplication.instance
@@ -47,6 +51,13 @@ object Worker {
     private val subscriptions = mutableListOf<Any>()
     private val subscriptionsChanged = Channel<Unit>(CONFLATED)
     private val permissionsChanged = Channel<Unit>(CONFLATED)
+    private val assistingChanged = Channel<Unit>(CONFLATED)
+
+    val assisting = MutableLiveData(true).apply {
+        observeForever {
+            assistingChanged.offer(Unit)
+        }
+    }
 
     val state: LiveData<State>
         get() = _state
@@ -65,9 +76,23 @@ object Worker {
         }
     }
 
+    /**
+     * To be called when user has asked to stop assistant.
+     */
+    fun stop(stopService: Boolean) {
+        require(threadCheck.isValid)
+
+        assisting.value = false
+
+        if (stopService) {
+            stopForegroundService()
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.M)
-    @MainThread
     fun updatePermission() {
+        require(threadCheck.isValid)
+
         permissionsChanged.offer(Unit)
     }
 
@@ -187,18 +212,52 @@ object Worker {
 
             val gatt = device.connectGatt(context, false, GattCallback())
             try {
+                var startTime = 0L
+                var lastHeartbeat = 0
+
+                fun updateState(hr: Int) {
+                    lastHeartbeat = hr
+                    if (assisting.value == true) {
+                        if (startTime == 0L) startTime = SystemClock.elapsedRealtime()
+                        _state.value = State.Assist(hr, startTime)
+                    } else {
+                        startTime = 0L
+                        _state.value = State.Monitor(hr)
+                    }
+                }
+
                 whileSelect {
                     subscriptionsChanged.onReceive {
                         require(threadCheck.isValid)
 
-                        subscriptions.isNotEmpty()
+                        if (subscriptions.isEmpty()) {
+                            if (assisting.value == true) {
+                                // There is no activity on the screen but an assistant is needed.
+                                startForegroundService()
+                                true
+                            } else {
+                                false
+                            }
+                        } else {
+                            true
+                        }
+                    }
+
+                    assistingChanged.onReceive {
+                        if (lastHeartbeat > 0) {
+                            updateState(lastHeartbeat)
+                        }
+                        // The user asked to stop, but the updates are still required
+                        // for the data on the screen.
+                        subscriptions.isNotEmpty() || assisting.value == true
                     }
 
                     channel.onReceiveOrNullExt().invoke { hr ->
                         require(threadCheck.isValid)
 
                         if (hr != null) {
-                            _state.value = State.Heartbeat(hr)
+                            updateState(hr)
+
                             true
                         } else {
                             false
@@ -251,6 +310,17 @@ object Worker {
                 scanner.stopScan(callback)
             }
         }
+    }
+
+    private fun startForegroundService() {
+        ContextCompat.startForegroundService(
+            context,
+            Intent(context, ForegroundService::class.java)
+        )
+    }
+
+    private fun stopForegroundService() {
+        context.stopService(Intent(context, ForegroundService::class.java))
     }
 
     const val CLIENT_CHARACTERISTIC_CONFIGURATION = "00002902-0000-1000-8000-00805f9b34fb"
