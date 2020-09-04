@@ -16,6 +16,10 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.ParcelUuid
 import android.os.SystemClock
@@ -27,6 +31,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -36,7 +41,9 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
+import kotlin.math.abs
 import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
 @MainThread
@@ -107,6 +114,9 @@ object Worker {
             return
         }
 
+        val vocalize = Channel<Int>(CONFLATED)
+        coroutineScope.launch { vocalizer(vocalize) }
+
         while (true) {
             val havePermission = checkPermission()
             _state.value = if (havePermission) State.Scanning else State.NoPermission
@@ -132,7 +142,7 @@ object Worker {
                 scanJob.onAwait { it }
             } ?: continue
 
-            val channel = Channel<Int>(CONFLATED)
+            val beatChannel = Channel<Int>(CONFLATED)
 
             class GattCallback : BluetoothGattCallback() {
                 override fun onConnectionStateChange(
@@ -193,8 +203,8 @@ object Worker {
 
                     if (flag and 0x8 == 1) offset += 2
 
-                    Log.e(TAG, "${flag.toString(16)} $hr")
-                    channel.offer(hr)
+                    Log.i(TAG, "${flag.toString(16)} $hr")
+                    beatChannel.offer(hr)
 
                     val size = characteristic.value.size
                     while (offset < size) {
@@ -204,7 +214,7 @@ object Worker {
                                 offset
                             )
                         val f = rr / 1024.0f
-                        Log.e(TAG, "rr: $f")
+                        Log.i(TAG, "rr: $f")
                         offset += 2
                     }
                 }
@@ -219,9 +229,13 @@ object Worker {
                     lastHeartbeat = hr
                     if (assisting.value == true) {
                         if (startTime == 0L) startTime = SystemClock.elapsedRealtime()
+
                         _state.value = State.Assist(hr, startTime)
+
+                        vocalize.offer(hr)
                     } else {
                         startTime = 0L
+
                         _state.value = State.Monitor(hr)
                     }
                 }
@@ -252,7 +266,7 @@ object Worker {
                         subscriptions.isNotEmpty() || assisting.value == true
                     }
 
-                    channel.onReceiveOrNullExt().invoke { hr ->
+                    beatChannel.onReceiveOrNullExt().invoke { hr ->
                         require(threadCheck.isValid)
 
                         if (hr != null) {
@@ -269,6 +283,163 @@ object Worker {
 
                 gatt.close()
             }
+        }
+    }
+
+    private suspend fun vocalizer(input: Channel<Int>) {
+        require(threadCheck.isValid)
+
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+        val audioSessionId = audioManager.generateAudioSessionId()
+        val oneAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+            MediaPlayer.create(
+                context,
+                R.raw.h1,
+                audioAttributes,
+                audioSessionId
+            )
+        }
+        val tensAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+            arrayOf(
+                MediaPlayer.create(
+                    context,
+                    R.raw.h10,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h20,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h30,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h40,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h50,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h60,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h70,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h80,
+                    audioAttributes,
+                    audioSessionId
+                ),
+                MediaPlayer.create(
+                    context,
+                    R.raw.h90,
+                    audioAttributes,
+                    audioSessionId
+                ),
+            )
+        }
+        val hundredAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+            MediaPlayer.create(
+                context,
+                R.raw.h100,
+                audioAttributes,
+                audioSessionId
+            )
+        }
+
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAcceptsDelayedFocusGain(false)
+            .setAudioAttributes(audioAttributes)
+            .build()
+
+        var lastTime = 0L
+        var lastHR = 0
+        for (hr in input) {
+            require(threadCheck.isValid)
+
+            val now = SystemClock.elapsedRealtime()
+
+            val update = when {
+                lastTime == 0L -> true
+                now - lastTime > TimeUnit.SECONDS.toMillis(10) -> true
+                abs(lastHR - hr) > 10 -> true
+                else -> false
+            }
+
+            if (update) {
+                val first = (hr / 100) % 10
+                val second = (hr / 10) % 10
+
+                Log.e(TAG, "$hr say: ${first * 100 + second * 10}")
+
+                if (first == 1 && second == 0) {
+                    if (!hundredAsync.isCompleted) continue
+
+                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
+
+                    playSound(hundredAsync.getCompleted())
+
+                    audioManager.abandonAudioFocusRequest(focusRequest)
+
+                } else if (first == 1) {
+                    if (!oneAsync.isCompleted) continue
+                    if (!tensAsync.isCompleted) continue
+
+                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
+
+                    playSound(oneAsync.getCompleted())
+                    playSound(tensAsync.getCompleted()[second - 1])
+
+                    audioManager.abandonAudioFocusRequest(focusRequest)
+                } else if (first == 0) {
+                    if (!tensAsync.isCompleted) continue
+
+                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
+
+                    playSound(tensAsync.getCompleted()[second - 1])
+
+                    audioManager.abandonAudioFocusRequest(focusRequest)
+                }
+
+                lastHR = first * 100 + second * 10
+                lastTime = now
+            }
+        }
+    }
+
+    private suspend fun playSound(sound: MediaPlayer) {
+        suspendCancellableCoroutine<Unit> { c ->
+            sound.setOnSeekCompleteListener { c.resume(Unit) }
+            sound.seekTo(0)
+        }
+
+        suspendCancellableCoroutine<Unit> { c ->
+            sound.setOnCompletionListener { c.resume(Unit) }
+            sound.start()
         }
     }
 
