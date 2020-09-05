@@ -366,7 +366,11 @@ object Worker {
             )
         }
 
-        val focusHelper = AudioFocusHelper(context)
+        val focusHelper = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioFocus26(context)
+        } else {
+            AudioFocus8(context)
+        }
 
         var lastTime = 0L
         var lastHR = 0
