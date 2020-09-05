@@ -16,8 +16,6 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
@@ -291,10 +289,7 @@ object Worker {
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ASSISTANT)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-            .build()
+        val audioAttributes = Audio.audioAttributes
         val audioSessionId = audioManager.generateAudioSessionId()
         val oneAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
             MediaPlayer.create(
@@ -371,10 +366,7 @@ object Worker {
             )
         }
 
-        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            .setAcceptsDelayedFocusGain(false)
-            .setAudioAttributes(audioAttributes)
-            .build()
+        val focusHelper = AudioFocusHelper(context)
 
         var lastTime = 0L
         var lastHR = 0
@@ -399,30 +391,25 @@ object Worker {
                 if (first == 1 && second == 0) {
                     if (!hundredAsync.isCompleted) continue
 
-                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
-
-                    playSound(hundredAsync.getCompleted())
-
-                    audioManager.abandonAudioFocusRequest(focusRequest)
+                    focusHelper.withFocus {
+                        playSound(hundredAsync.getCompleted())
+                    }
 
                 } else if (first == 1) {
                     if (!oneAsync.isCompleted) continue
                     if (!tensAsync.isCompleted) continue
 
-                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
+                    focusHelper.withFocus {
+                        playSound(oneAsync.getCompleted())
+                        playSound(tensAsync.getCompleted()[second - 1])
+                    }
 
-                    playSound(oneAsync.getCompleted())
-                    playSound(tensAsync.getCompleted()[second - 1])
-
-                    audioManager.abandonAudioFocusRequest(focusRequest)
                 } else if (first == 0) {
                     if (!tensAsync.isCompleted) continue
 
-                    if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) continue
-
-                    playSound(tensAsync.getCompleted()[second - 1])
-
-                    audioManager.abandonAudioFocusRequest(focusRequest)
+                    focusHelper.withFocus {
+                        playSound(tensAsync.getCompleted()[second - 1])
+                    }
                 }
 
                 lastHR = first * 100 + second * 10
