@@ -84,7 +84,7 @@ object Worker {
         get() = _state
 
     init {
-        coroutineScope.launch { work() }
+        launchJob()
     }
 
     fun subscribe(key: Any): AutoCloseable? {
@@ -117,7 +117,7 @@ object Worker {
         permissionsChanged.offer(Unit)
     }
 
-    private suspend fun work() {
+    private fun launchJob() = coroutineScope.launch {
         require(threadCheck.isValid)
 
         val bluetoothLeScanner: BluetoothLeScanner? =
@@ -125,11 +125,11 @@ object Worker {
 
         if (bluetoothLeScanner == null) {
             _state.value = State.NoBluetooth
-            return
+            return@launch
         }
 
         val vocalize = Channel<Int>(CONFLATED)
-        coroutineScope.launch { vocalizer(vocalize) }
+        launchVocalizer(vocalize)
 
         while (true) {
             val havePermission = checkPermission()
@@ -147,7 +147,7 @@ object Worker {
                 continue
             }
 
-            val scanJob = coroutineScope.async { scanForResult(bluetoothLeScanner) }
+            val scanJob = scanForResultAsync(bluetoothLeScanner)
             val device = select<BluetoothDevice?> {
                 subscriptionsChanged.onReceive {
                     scanJob.cancelAndJoin()
@@ -300,14 +300,14 @@ object Worker {
         }
     }
 
-    private suspend fun vocalizer(input: Channel<Int>) {
+    private fun launchVocalizer(input: Channel<Int>) = coroutineScope.launch {
         require(threadCheck.isValid)
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         val audioAttributes = Audio.audioAttributes
         val audioSessionId = audioManager.generateAudioSessionId()
-        val oneAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+        val oneAsync = async(Dispatchers.IO + SupervisorJob()) {
             MediaPlayer.create(
                 context,
                 R.raw.h1,
@@ -315,7 +315,7 @@ object Worker {
                 audioSessionId
             )
         }
-        val tensAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+        val tensAsync = async(Dispatchers.IO + SupervisorJob()) {
             arrayOf(
                 MediaPlayer.create(
                     context,
@@ -373,7 +373,7 @@ object Worker {
                 ),
             )
         }
-        val hundredAsync = coroutineScope.async(Dispatchers.IO + SupervisorJob()) {
+        val hundredAsync = async(Dispatchers.IO + SupervisorJob()) {
             MediaPlayer.create(
                 context,
                 R.raw.h100,
@@ -458,37 +458,38 @@ object Worker {
         }
     }
 
-    private suspend fun scanForResult(scanner: BluetoothLeScanner): BluetoothDevice {
-        require(threadCheck.isValid)
+    private fun scanForResultAsync(scanner: BluetoothLeScanner) =
+        coroutineScope.async<BluetoothDevice> {
+            require(threadCheck.isValid)
 
-        return suspendCancellableCoroutine { invocation ->
-            val callback = object : ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: ScanResult?) {
+            suspendCancellableCoroutine { invocation ->
+                val callback = object : ScanCallback() {
+                    override fun onScanResult(callbackType: Int, result: ScanResult?) {
+                        require(threadCheck.isValid)
+
+                        if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
+                        if (result == null) return
+
+                        scanner.stopScan(this)
+
+                        if (invocation.isActive) invocation.resume(result.device)
+                    }
+                }
+
+                val settings = ScanSettings.Builder().build()
+                val filter =
+                    ScanFilter.Builder()
+                        .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
+                        .build()
+                scanner.startScan(listOf(filter), settings, callback)
+
+                invocation.invokeOnCancellation {
                     require(threadCheck.isValid)
 
-                    if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
-                    if (result == null) return
-
-                    scanner.stopScan(this)
-
-                    if (invocation.isActive) invocation.resume(result.device)
+                    scanner.stopScan(callback)
                 }
             }
-
-            val settings = ScanSettings.Builder().build()
-            val filter =
-                ScanFilter.Builder()
-                    .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
-                    .build()
-            scanner.startScan(listOf(filter), settings, callback)
-
-            invocation.invokeOnCancellation {
-                require(threadCheck.isValid)
-
-                scanner.stopScan(callback)
-            }
         }
-    }
 
     private fun startForegroundService() {
         ContextCompat.startForegroundService(
