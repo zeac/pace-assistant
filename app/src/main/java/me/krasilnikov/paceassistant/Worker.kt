@@ -33,7 +33,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
-import android.media.MediaPlayer
 import android.os.Build
 import android.os.ParcelUuid
 import android.os.SystemClock
@@ -45,11 +44,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
@@ -129,7 +128,7 @@ object Worker {
         }
 
         val vocalize = Channel<Int>(CONFLATED)
-        launchVocalizer(vocalize)
+        launchAnnouncer(vocalize)
 
         while (true) {
             val havePermission = checkPermission()
@@ -300,93 +299,18 @@ object Worker {
         }
     }
 
-    private fun launchVocalizer(input: Channel<Int>) = coroutineScope.launch {
+    private fun launchAnnouncer(input: Channel<Int>) = coroutineScope.launch {
         require(threadCheck.isValid)
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        val audioAttributes = Audio.audioAttributes
         val audioSessionId = audioManager.generateAudioSessionId()
-        val oneAsync = async(Dispatchers.IO + SupervisorJob()) {
-            MediaPlayer.create(
-                context,
-                R.raw.h1,
-                audioAttributes,
-                audioSessionId
-            )
-        }
-        val tensAsync = async(Dispatchers.IO + SupervisorJob()) {
-            arrayOf(
-                MediaPlayer.create(
-                    context,
-                    R.raw.h10,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h20,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h30,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h40,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h50,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h60,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h70,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h80,
-                    audioAttributes,
-                    audioSessionId
-                ),
-                MediaPlayer.create(
-                    context,
-                    R.raw.h90,
-                    audioAttributes,
-                    audioSessionId
-                ),
-            )
-        }
-        val hundredAsync = async(Dispatchers.IO + SupervisorJob()) {
-            MediaPlayer.create(
-                context,
-                R.raw.h100,
-                audioAttributes,
-                audioSessionId
-            )
-        }
-
         val focusHelper = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             AudioFocus26(context)
         } else {
             AudioFocus8(context)
         }
+        val announcer = createAnnouncer(context, audioSessionId)
 
         var lastTime = 0L
         var lastHR = 0
@@ -403,50 +327,18 @@ object Worker {
             }
 
             if (update) {
+                focusHelper.withFocus {
+                    delay(200)
+
+                    announcer.say(hr)
+                }
+
                 val first = (hr / 100) % 10
                 val second = (hr / 10) % 10
-
-                Log.e(TAG, "$hr say: ${first * 100 + second * 10}")
-
-                if (first == 1 && second == 0) {
-                    if (!hundredAsync.isCompleted) continue
-
-                    focusHelper.withFocus {
-                        playSound(hundredAsync.getCompleted())
-                    }
-
-                } else if (first == 1) {
-                    if (!oneAsync.isCompleted) continue
-                    if (!tensAsync.isCompleted) continue
-
-                    focusHelper.withFocus {
-                        playSound(oneAsync.getCompleted())
-                        playSound(tensAsync.getCompleted()[second - 1])
-                    }
-
-                } else if (first == 0) {
-                    if (!tensAsync.isCompleted) continue
-
-                    focusHelper.withFocus {
-                        playSound(tensAsync.getCompleted()[second - 1])
-                    }
-                }
 
                 lastHR = first * 100 + second * 10
                 lastTime = now
             }
-        }
-    }
-
-    private suspend fun playSound(sound: MediaPlayer) {
-        suspendCancellableCoroutine<Unit> { c ->
-            sound.setOnSeekCompleteListener { c.resume(Unit) }
-            sound.seekTo(0)
-        }
-
-        suspendCancellableCoroutine<Unit> { c ->
-            sound.setOnCompletionListener { c.resume(Unit) }
-            sound.start()
         }
     }
 
