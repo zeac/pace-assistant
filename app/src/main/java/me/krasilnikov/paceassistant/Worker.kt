@@ -327,14 +327,15 @@ object Worker {
             }
 
             if (update) {
+                val third = hr % 10
+                val second = ((hr / 10) % 10) + if (third > 5) 1 else 0
+                val first = (hr / 100) % 10
+
                 focusHelper.withFocus {
                     delay(200)
 
-                    announcer.say(hr)
+                    announcer.say(first * 100 + second * 10)
                 }
-
-                val first = (hr / 100) % 10
-                val second = (hr / 10) % 10
 
                 lastHR = first * 100 + second * 10
                 lastTime = now
