@@ -321,7 +321,7 @@ object Worker {
 
             val update = when {
                 lastTime == 0L -> true
-                now - lastTime > TimeUnit.SECONDS.toMillis(10) -> true
+                now - lastTime > TimeUnit.SECONDS.toMillis(30) -> true
                 abs(lastHR - hr) > 10 -> true
                 else -> false
             }
