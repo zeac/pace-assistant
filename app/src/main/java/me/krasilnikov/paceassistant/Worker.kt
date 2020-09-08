@@ -30,10 +30,8 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -56,6 +54,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.lang.IllegalStateException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -68,6 +67,7 @@ object Worker {
     private val context = PaceApplication.instance
     private val threadCheck = ThreadChecker()
     private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
+    private val bluetoothHelper = BluetoothHelper(context)
 
     private val _state = MutableLiveData<State>()
 
@@ -136,26 +136,7 @@ object Worker {
             if (!bluetoothAdapter.isEnabled) {
                 _state.value = State.BluetoothIsTurnedOf
 
-                val stateChanged = Channel<Unit>(CONFLATED)
-                val receiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: Context, intent: Intent) {
-                        require(threadCheck.isValid)
-
-                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.STATE_OFF)
-                        if (state == BluetoothAdapter.STATE_ON) {
-                            stateChanged.offer(Unit)
-                        }
-                    }
-                }
-
-                context.registerReceiver(receiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
-                try {
-                    stateChanged.receive()
-                } finally {
-                    require(threadCheck.isValid)
-
-                    context.unregisterReceiver(receiver)
-                }
+                bluetoothHelper.waitForChange(BluetoothAdapter.STATE_ON)
             }
 
             val bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner ?: continue
@@ -176,13 +157,17 @@ object Worker {
             }
 
             val scanJob = scanForResultAsync(bluetoothLeScanner)
+            val turnedOff = async { bluetoothHelper.waitForChange(BluetoothAdapter.STATE_OFF) }
             val device = select<BluetoothDevice?> {
-                subscriptionsChanged.onReceive {
-                    scanJob.cancelAndJoin()
-                    null
-                }
+                subscriptionsChanged.onReceive { null }
                 scanJob.onAwait { it }
-            } ?: continue
+                turnedOff.onAwait { null }
+            }
+            if (device == null) {
+                scanJob.cancelAndJoin()
+                turnedOff.cancelAndJoin()
+                continue
+            }
 
             val beatChannel = Channel<Int>(CONFLATED)
 
@@ -408,7 +393,11 @@ object Worker {
                 invocation.invokeOnCancellation {
                     require(threadCheck.isValid)
 
-                    scanner.stopScan(callback)
+                    try {
+                        scanner.stopScan(callback)
+                    } catch (e: IllegalStateException) {
+                        // It would be better if stopScan was idempotent.
+                    }
                 }
             }
         }
