@@ -17,6 +17,8 @@
 package me.krasilnikov.paceassistant
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -96,6 +98,7 @@ class MainActivity : AppCompatActivity() {
             ) {
                 when (state) {
                     State.NoBluetooth -> noBluetooth()
+                    State.BluetoothIsTurnedOf -> bluetoothIsTurnedOff()
                     State.NoPermission -> noPermission()
                     State.Scanning -> scanning()
                     is State.Monitor -> showHeartbeat(state.beat)
@@ -190,6 +193,18 @@ class MainActivity : AppCompatActivity() {
             text = "No bluetooth",
             color = MaterialTheme.colors.onSurface,
         )
+    }
+
+    @Composable
+    private fun bluetoothIsTurnedOff() {
+        Button(onClick = {
+            startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+        }) {
+            Text(
+                text = "Enable bluetooth",
+                color = MaterialTheme.colors.onPrimary,
+            )
+        }
     }
 
     @Composable

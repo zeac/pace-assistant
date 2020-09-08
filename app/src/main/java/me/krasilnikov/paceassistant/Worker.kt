@@ -30,8 +30,10 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -127,18 +129,37 @@ object Worker {
             return@launch
         }
 
-        val bluetoothLeScanner: BluetoothLeScanner? =
-            bluetoothAdapter.bluetoothLeScanner
-
-        if (bluetoothLeScanner == null) {
-            _state.value = State.NoBluetooth
-            return@launch
-        }
-
         val vocalize = Channel<Int>(CONFLATED)
         launchAnnouncer(vocalize)
 
         while (true) {
+            if (!bluetoothAdapter.isEnabled) {
+                _state.value = State.BluetoothIsTurnedOf
+
+                val stateChanged = Channel<Unit>(CONFLATED)
+                val receiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context, intent: Intent) {
+                        require(threadCheck.isValid)
+
+                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.STATE_OFF)
+                        if (state == BluetoothAdapter.STATE_ON) {
+                            stateChanged.offer(Unit)
+                        }
+                    }
+                }
+
+                context.registerReceiver(receiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
+                try {
+                    stateChanged.receive()
+                } finally {
+                    require(threadCheck.isValid)
+
+                    context.unregisterReceiver(receiver)
+                }
+            }
+
+            val bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner ?: continue
+
             val havePermission = checkPermission()
             _state.value = if (havePermission) State.Scanning else State.NoPermission
 

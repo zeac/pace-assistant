@@ -23,6 +23,11 @@ sealed class State {
     object NoBluetooth : State()
 
     /**
+     * Bluetooth adapter is available but it is turned off.
+     */
+    object BluetoothIsTurnedOf : State()
+
+    /**
      * No location permission is granted.
      */
     object NoPermission : State()
