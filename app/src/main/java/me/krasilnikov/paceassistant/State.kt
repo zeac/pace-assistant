@@ -17,9 +17,29 @@
 package me.krasilnikov.paceassistant
 
 sealed class State {
+    /**
+     * The phone have no bluetooth at all.
+     */
     object NoBluetooth : State()
+
+    /**
+     * No location permission is granted.
+     */
     object NoPermission : State()
+
+    /**
+     * A scanning in progress.
+     */
     object Scanning : State()
+
+    /**
+     * Heartbeat sensor is connected, but the assistant is disabled.
+     */
     data class Monitor(val beat: Int) : State()
+
+    /**
+     * Heartbeat sensor is connected, the assistant is enabled.
+     * @param assistStartTime the time when assisting was started.
+     */
     data class Assist(val beat: Int, val assistStartTime: Long) : State()
 }
