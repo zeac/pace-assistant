@@ -17,6 +17,7 @@
 package me.krasilnikov.paceassistant
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -119,8 +120,15 @@ object Worker {
     private fun launchJob() = coroutineScope.launch {
         require(threadCheck.isValid)
 
+        val bluetoothAdapter: BluetoothAdapter? =
+            (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        if (bluetoothAdapter == null) {
+            _state.value = State.NoBluetooth
+            return@launch
+        }
+
         val bluetoothLeScanner: BluetoothLeScanner? =
-            (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner
+            bluetoothAdapter.bluetoothLeScanner
 
         if (bluetoothLeScanner == null) {
             _state.value = State.NoBluetooth
