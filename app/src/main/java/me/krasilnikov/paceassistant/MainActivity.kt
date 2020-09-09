@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity() {
     private fun showHeartbeat(state: HeartbeatState) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Top,
             horizontalGravity = Alignment.CenterHorizontally
         ) {
             Text(
