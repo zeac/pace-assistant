@@ -26,6 +26,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Box
 import androidx.compose.foundation.Text
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -101,8 +102,8 @@ class MainActivity : AppCompatActivity() {
                     State.BluetoothIsTurnedOff -> bluetoothIsTurnedOff()
                     State.NoPermission -> noPermission()
                     State.Scanning -> scanning()
-                    is State.Monitor -> showHeartbeat(state.beat)
-                    is State.Assist -> showHeartbeat(state.beat)
+                    is State.Monitor -> showHeartbeat(state)
+                    is State.Assist -> showHeartbeat(state)
                 }
             }
 
@@ -150,12 +151,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun showHeartbeat(beat: Int = 120) {
-        Text(
-            fontSize = 96.sp,
-            text = "$beat",
-            color = MaterialTheme.colors.onSurface,
-        )
+    private fun showHeartbeat(state: HeartbeatState) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalGravity = Alignment.CenterHorizontally
+        ) {
+            Text(
+                fontSize = 96.sp,
+                text = "${state.beat}",
+                color = MaterialTheme.colors.onSurface,
+            )
+            Text(
+                text = state.deviceName,
+                color = MaterialTheme.colors.onSurface,
+            )
+        }
     }
 
     @Composable
@@ -210,7 +221,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     @Preview(showDecoration = true, device = Devices.PIXEL_3)
     private fun showHeartbeatPreview() {
-        contentForState(state = State.Assist(120, 0L))
+        contentForState(state = State.Assist(beat = 120, deviceName = "Polar H7", assistStartTime = 0L))
     }
 
     @Composable

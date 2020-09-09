@@ -16,6 +16,18 @@
 
 package me.krasilnikov.paceassistant
 
+interface HeartbeatState {
+    /**
+     * Current HR.
+     */
+    val beat: Int
+
+    /**
+     * Name of the device the data is taken from.
+     */
+    val deviceName: String
+}
+
 sealed class State {
     /**
      * The phone have no bluetooth at all.
@@ -40,11 +52,12 @@ sealed class State {
     /**
      * Heartbeat sensor is connected, but the assistant is disabled.
      */
-    data class Monitor(val beat: Int) : State()
+    data class Monitor(override val beat: Int, override val deviceName: String) : State(), HeartbeatState
 
     /**
      * Heartbeat sensor is connected, the assistant is enabled.
      * @param assistStartTime the time when assisting was started.
      */
-    data class Assist(val beat: Int, val assistStartTime: Long) : State()
+    data class Assist(override val beat: Int, override val deviceName: String, val assistStartTime: Long) :
+        State(), HeartbeatState
 }

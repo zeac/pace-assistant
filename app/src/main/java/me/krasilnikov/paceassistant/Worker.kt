@@ -262,13 +262,13 @@ object Worker {
                     if (assisting.value == true) {
                         if (startTime == 0L) startTime = SystemClock.elapsedRealtime()
 
-                        _state.value = State.Assist(hr, startTime)
+                        _state.value = State.Assist(beat = hr, deviceName = device.name, assistStartTime = startTime)
 
                         vocalizeChannel.offer(hr)
                     } else {
                         startTime = 0L
 
-                        _state.value = State.Monitor(hr)
+                        _state.value = State.Monitor(beat = hr, deviceName = device.name)
                     }
                 }
 
