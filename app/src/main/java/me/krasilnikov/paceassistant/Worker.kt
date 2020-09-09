@@ -76,6 +76,8 @@ object Worker {
     private val permissionsChanged = Channel<Unit>(CONFLATED)
     private val assistingChanged = Channel<Unit>(CONFLATED)
 
+    private val vocalizeChannel = Channel<Int>(CONFLATED)
+
     val assisting = MutableLiveData(true).apply {
         observeForever {
             assistingChanged.offer(Unit)
@@ -129,8 +131,7 @@ object Worker {
             return@launch
         }
 
-        val vocalize = Channel<Int>(CONFLATED)
-        launchAnnouncer(vocalize)
+        launchAnnouncer()
 
         while (true) {
             if (!bluetoothAdapter.isEnabled) {
@@ -141,6 +142,19 @@ object Worker {
 
             val bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner ?: continue
 
+            // Launch the actual job to be able to cancel it when bluetooth is disabled.
+            val listenJob = launch { scanAndListen(bluetoothLeScanner) }
+
+            bluetoothHelper.waitForChange(BluetoothAdapter.STATE_OFF)
+
+            listenJob.cancelAndJoin()
+        }
+    }
+
+    private suspend fun scanAndListen(bluetoothLeScanner: BluetoothLeScanner) {
+        require(threadCheck.isValid)
+        
+        while (true) {
             val havePermission = checkPermission()
             _state.value = if (havePermission) State.Scanning else State.NoPermission
 
@@ -157,15 +171,12 @@ object Worker {
             }
 
             val scanJob = scanForResultAsync(bluetoothLeScanner)
-            val turnedOff = async { bluetoothHelper.waitForChange(BluetoothAdapter.STATE_OFF) }
             val device = select<BluetoothDevice?> {
                 subscriptionsChanged.onReceive { null }
                 scanJob.onAwait { it }
-                turnedOff.onAwait { null }
             }
             if (device == null) {
                 scanJob.cancelAndJoin()
-                turnedOff.cancelAndJoin()
                 continue
             }
 
@@ -259,7 +270,7 @@ object Worker {
 
                         _state.value = State.Assist(hr, startTime)
 
-                        vocalize.offer(hr)
+                        vocalizeChannel.offer(hr)
                     } else {
                         startTime = 0L
 
@@ -313,7 +324,7 @@ object Worker {
         }
     }
 
-    private fun launchAnnouncer(input: Channel<Int>) = coroutineScope.launch {
+    private fun launchAnnouncer() = coroutineScope.launch {
         require(threadCheck.isValid)
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -328,7 +339,7 @@ object Worker {
 
         var lastTime = 0L
         var lastHR = 0
-        for (hr in input) {
+        for (hr in vocalizeChannel) {
             require(threadCheck.isValid)
 
             val now = SystemClock.elapsedRealtime()

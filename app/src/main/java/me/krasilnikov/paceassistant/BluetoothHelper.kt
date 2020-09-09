@@ -21,18 +21,27 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import kotlinx.coroutines.channels.Channel
 
 class BluetoothHelper(private val context: Context) {
     private val threadCheck = ThreadChecker()
 
+    /**
+     * Suspend execution until bluetooth state changes to the given value.
+     */
     suspend fun waitForChange(newState: Int) {
+        Log.i("Pace", "BluetoothHelper.waitForChange: $newState")
+
         val stateChanged = Channel<Unit>(Channel.CONFLATED)
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 require(threadCheck.isValid)
 
                 val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+
+                Log.i("Pace", "BluetoothHelper.waitForChange: bluetooth state had changed to $state")
+
                 if (state == newState) {
                     stateChanged.offer(Unit)
                 }
