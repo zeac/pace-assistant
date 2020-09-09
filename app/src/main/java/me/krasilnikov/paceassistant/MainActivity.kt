@@ -18,10 +18,14 @@ package me.krasilnikov.paceassistant
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
+import android.content.ClipData
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.Menu
+import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Box
@@ -62,6 +66,30 @@ class MainActivity : AppCompatActivity() {
                 contentForState(state!!)
             }
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.share_log) {
+            val uri = Uri.parse("content://me.krasilnikov.paceassistant.log/log.txt")
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("paceassistant@krasilnikov.me"))
+                putExtra(Intent.EXTRA_SUBJECT, "Pace Assistant log report")
+
+                clipData = ClipData("Log file", arrayOf("text/plain"), ClipData.Item(uri))
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+            }
+            startActivity(Intent.createChooser(intent, "Share log"))
+            return true
+        }
+
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onStart() {

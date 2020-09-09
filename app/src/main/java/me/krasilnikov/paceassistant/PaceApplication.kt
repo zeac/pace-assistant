@@ -17,12 +17,19 @@
 package me.krasilnikov.paceassistant
 
 import android.app.Application
+import timber.log.Timber
 
 class PaceApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
         instance = this
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+
+        Timber.plant(FileLogger)
     }
 
     companion object {

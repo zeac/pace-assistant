@@ -34,7 +34,6 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.ParcelUuid
 import android.os.SystemClock
-import android.util.Log
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
@@ -50,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
+import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
@@ -121,6 +121,7 @@ object Worker {
         val bluetoothAdapter: BluetoothAdapter? =
             (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         if (bluetoothAdapter == null) {
+            Timber.tag(TAG).e("No bluetooth available")
             _state.value = State.NoBluetooth
             return@launch
         }
@@ -235,7 +236,7 @@ object Worker {
 
                     if (flag and 0x8 == 1) offset += 2
 
-                    Log.i(TAG, "${flag.toString(16)} $hr")
+                    Timber.tag(TAG).i("%s %d", flag.toString(16), hr)
                     beatChannel.offer(hr)
 
                     val size = characteristic.value.size
@@ -246,7 +247,7 @@ object Worker {
                                 offset
                             )
                         val f = rr / 1024.0f
-                        Log.i(TAG, "rr: $f")
+                        Timber.tag(TAG).i("rr %f", f)
                         offset += 2
                     }
                 }
@@ -399,5 +400,5 @@ object Worker {
     const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
     const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
 
-    const val TAG = "Pace"
+    const val TAG = "Worker"
 }

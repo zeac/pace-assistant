@@ -27,11 +27,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.ParcelUuid
-import android.util.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.lang.IllegalStateException
+import timber.log.Timber
 import kotlin.coroutines.resume
 
 class BluetoothHelper(private val context: Context) {
@@ -41,7 +39,7 @@ class BluetoothHelper(private val context: Context) {
      * Suspend execution until bluetooth state changes to the given value.
      */
     suspend fun waitForChange(newState: Int) {
-        Log.i("Pace", "BluetoothHelper.waitForChange: $newState")
+        Timber.tag("BluetoothHelper").i(".waitForChange: %d", newState)
 
         val stateChanged = Channel<Unit>(Channel.CONFLATED)
         val receiver = object : BroadcastReceiver() {
@@ -50,7 +48,7 @@ class BluetoothHelper(private val context: Context) {
 
                 val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
 
-                Log.i("Pace", "BluetoothHelper.waitForChange: bluetooth state had changed to $state")
+                Timber.tag("BluetoothHelper").i(".waitForChange: bluetooth state had changed to %d", state)
 
                 if (state == newState) {
                     stateChanged.offer(Unit)

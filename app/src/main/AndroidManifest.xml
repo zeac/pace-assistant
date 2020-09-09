@@ -39,6 +39,12 @@
         <service
             android:name=".ForegroundService"
             android:foregroundServiceType="connectedDevice" />
+
+        <provider
+            android:name=".LogProvider"
+            android:authorities="me.krasilnikov.paceassistant.log"
+            android:grantUriPermissions="true"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -17,15 +17,12 @@
 package me.krasilnikov.paceassistant
 
 import android.content.Context
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.util.Log
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.util.UUID
 import kotlin.coroutines.resume
 
@@ -59,7 +56,7 @@ class TTSAnnouncer(private val tts: TextToSpeech, audioSessionId: Int) : Announc
             "Something went wrong"
         }
 
-        Log.e(Worker.TAG, "$hr say with tts: $text")
+        Timber.tag("Announcer").i("%d say with tts: %s", hr, text)
 
         suspendCancellableCoroutine<Unit> { cont ->
             tts.setOnUtteranceProgressListener(object :
