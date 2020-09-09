@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Pace Assistant</string>
+    <string name="stop_assist">Stop assist</string>
+    <string name="voice_assist">Voice assist</string>
+    <string name="connecting">Connecting…</string>
+    <string name="give_permission">Give permission</string>
+    <string name="no_bluetooth">No bluetooth available</string>
+    <string name="enable_bluetooth">Enable bluetooth</string>
+    <string name="stop">Stop</string>
+    <string name="assisting">Assisting…</string>
 </resources>

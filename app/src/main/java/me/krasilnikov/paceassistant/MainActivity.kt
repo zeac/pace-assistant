@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
@@ -125,7 +126,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun stopButton() {
         Button(onClick = { Worker.stop(true) }) {
-            Text(text = "Stop assist")
+            Text(text = stringResource(R.string.stop_assist))
         }
     }
 
@@ -140,7 +141,7 @@ class MainActivity : AppCompatActivity() {
         ) {
 
             Text(
-                text = "Voice assist",
+                text = stringResource(R.string.voice_assist),
                 color = MaterialTheme.colors.onSurface,
             )
 
@@ -172,7 +173,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun scanning() {
         Text(
-            text = "Connecting",
+            text = stringResource(R.string.connecting),
             color = MaterialTheme.colors.onSurface,
         )
     }
@@ -192,7 +193,7 @@ class MainActivity : AppCompatActivity() {
             }
         ) {
             Text(
-                text = "Give permission",
+                text = stringResource(R.string.give_permission),
                 color = MaterialTheme.colors.onPrimary,
             )
         }
@@ -201,7 +202,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun noBluetooth() {
         Text(
-            text = "No bluetooth",
+            text = stringResource(R.string.no_bluetooth),
             color = MaterialTheme.colors.onSurface,
         )
     }
@@ -212,7 +213,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }) {
             Text(
-                text = "Enable bluetooth",
+                text = stringResource(R.string.enable_bluetooth),
                 color = MaterialTheme.colors.onPrimary,
             )
         }

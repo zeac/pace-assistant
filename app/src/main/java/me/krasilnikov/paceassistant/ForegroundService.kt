@@ -72,7 +72,7 @@ class ForegroundService : Service() {
             return START_NOT_STICKY
         }
 
-        val stopAction = NotificationCompat.Action.Builder(0, "Stop", stopIntent).build()
+        val stopAction = NotificationCompat.Action.Builder(0, getString(R.string.stop), stopIntent).build()
 
         startForeground(
             1,
@@ -84,7 +84,7 @@ class ForegroundService : Service() {
                 setAllowSystemGeneratedContextualActions(false)
                 setSilent(true)
                 setOngoing(true)
-                setContentTitle("Title")
+                setContentTitle(getString(R.string.assisting))
                 setSmallIcon(R.drawable.ic_launcher_foreground)
                 setUsesChronometer(true)
                 setVisibility(NotificationCompat.VISIBILITY_SECRET)
