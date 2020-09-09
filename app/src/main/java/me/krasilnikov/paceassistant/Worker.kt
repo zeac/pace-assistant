@@ -134,7 +134,7 @@ object Worker {
 
         while (true) {
             if (!bluetoothAdapter.isEnabled) {
-                _state.value = State.BluetoothIsTurnedOf
+                _state.value = State.BluetoothIsTurnedOff
 
                 bluetoothHelper.waitForChange(BluetoothAdapter.STATE_ON)
             }

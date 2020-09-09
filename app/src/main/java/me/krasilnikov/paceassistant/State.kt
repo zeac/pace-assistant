@@ -25,7 +25,7 @@ sealed class State {
     /**
      * Bluetooth adapter is available but it is turned off.
      */
-    object BluetoothIsTurnedOf : State()
+    object BluetoothIsTurnedOff : State()
 
     /**
      * No location permission is granted.

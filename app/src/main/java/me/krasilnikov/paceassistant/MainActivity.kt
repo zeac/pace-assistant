@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity() {
             ) {
                 when (state) {
                     State.NoBluetooth -> noBluetooth()
-                    State.BluetoothIsTurnedOf -> bluetoothIsTurnedOff()
+                    State.BluetoothIsTurnedOff -> bluetoothIsTurnedOff()
                     State.NoPermission -> noPermission()
                     State.Scanning -> scanning()
                     is State.Monitor -> showHeartbeat(state.beat)
