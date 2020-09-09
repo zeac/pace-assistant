@@ -26,10 +26,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -53,11 +50,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
-import kotlinx.coroutines.suspendCancellableCoroutine
-import java.lang.IllegalStateException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
@@ -153,7 +147,7 @@ object Worker {
 
     private suspend fun scanAndListen(bluetoothLeScanner: BluetoothLeScanner) {
         require(threadCheck.isValid)
-        
+
         while (true) {
             val havePermission = checkPermission()
             _state.value = if (havePermission) State.Scanning else State.NoPermission
@@ -376,42 +370,15 @@ object Worker {
         }
     }
 
-    private fun scanForResultAsync(scanner: BluetoothLeScanner) =
-        coroutineScope.async<BluetoothDevice> {
-            require(threadCheck.isValid)
+    private fun scanForResultAsync(scanner: BluetoothLeScanner) = coroutineScope.async {
+        require(threadCheck.isValid)
 
-            suspendCancellableCoroutine { invocation ->
-                val callback = object : ScanCallback() {
-                    override fun onScanResult(callbackType: Int, result: ScanResult?) {
-                        require(threadCheck.isValid)
-
-                        if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
-                        if (result == null) return
-
-                        scanner.stopScan(this)
-
-                        if (invocation.isActive) invocation.resume(result.device)
-                    }
-                }
-
-                val settings = ScanSettings.Builder().build()
-                val filter =
-                    ScanFilter.Builder()
-                        .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
-                        .build()
-                scanner.startScan(listOf(filter), settings, callback)
-
-                invocation.invokeOnCancellation {
-                    require(threadCheck.isValid)
-
-                    try {
-                        scanner.stopScan(callback)
-                    } catch (e: IllegalStateException) {
-                        // It would be better if stopScan was idempotent.
-                    }
-                }
-            }
-        }
+        val filter =
+            ScanFilter.Builder()
+                .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
+                .build()
+        bluetoothHelper.scanForFirst(scanner, filter)
+    }
 
     private fun startForegroundService() {
         ContextCompat.startForegroundService(

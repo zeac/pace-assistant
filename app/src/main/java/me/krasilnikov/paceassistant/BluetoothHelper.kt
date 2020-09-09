@@ -17,12 +17,22 @@
 package me.krasilnikov.paceassistant
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.lang.IllegalStateException
+import kotlin.coroutines.resume
 
 class BluetoothHelper(private val context: Context) {
     private val threadCheck = ThreadChecker()
@@ -55,6 +65,36 @@ class BluetoothHelper(private val context: Context) {
             require(threadCheck.isValid)
 
             context.unregisterReceiver(receiver)
+        }
+    }
+
+    suspend fun scanForFirst(scanner: BluetoothLeScanner, filter: ScanFilter): BluetoothDevice {
+        return suspendCancellableCoroutine { invocation ->
+            val callback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult?) {
+                    require(threadCheck.isValid)
+
+                    if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
+                    if (result == null) return
+
+                    scanner.stopScan(this)
+
+                    if (invocation.isActive) invocation.resume(result.device)
+                }
+            }
+
+            val settings = ScanSettings.Builder().build()
+            scanner.startScan(listOf(filter), settings, callback)
+
+            invocation.invokeOnCancellation {
+                require(threadCheck.isValid)
+
+                try {
+                    scanner.stopScan(callback)
+                } catch (e: IllegalStateException) {
+                    // It would be better if stopScan was idempotent.
+                }
+            }
         }
     }
 }
