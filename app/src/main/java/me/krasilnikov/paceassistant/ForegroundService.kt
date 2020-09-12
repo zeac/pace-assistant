@@ -88,6 +88,10 @@ class ForegroundService : Service() {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
                 setUsesChronometer(true)
                 setVisibility(NotificationCompat.VISIBILITY_SECRET)
+                if (intent != null) {
+                    val startTime = intent.getLongExtra("when", 0L)
+                    if (startTime > 0L) setWhen(startTime)
+                }
                 build()
             },
         )

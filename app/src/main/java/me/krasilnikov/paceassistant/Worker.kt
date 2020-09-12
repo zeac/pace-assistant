@@ -258,12 +258,16 @@ object Worker {
             val gatt = device.connectGatt(context, false, GattCallback())
             try {
                 var startTime = 0L
+                var startTimeUTC = 0L
                 var lastHeartbeat = 0
 
                 fun updateState(hr: Int) {
                     lastHeartbeat = hr
                     if (assisting.value == true) {
-                        if (startTime == 0L) startTime = SystemClock.elapsedRealtime()
+                        if (startTime == 0L) {
+                            startTime = SystemClock.elapsedRealtime()
+                            startTimeUTC = System.currentTimeMillis()
+                        }
 
                         _state.value = State.Assist(beat = hr, deviceName = device.name, assistStartTime = startTime)
 
@@ -282,7 +286,7 @@ object Worker {
                         if (subscriptions.isEmpty()) {
                             if (assisting.value == true) {
                                 // There is no activity on the screen but an assistant is needed.
-                                startForegroundService()
+                                startForegroundService(startTimeUTC)
                                 true
                             } else {
                                 false
@@ -381,10 +385,12 @@ object Worker {
         bluetoothHelper.scanForFirst(scanner, filter)
     }
 
-    private fun startForegroundService() {
+    private fun startForegroundService(startTime: Long) {
         ContextCompat.startForegroundService(
             context,
-            Intent(context, ForegroundService::class.java)
+            Intent(context, ForegroundService::class.java).apply {
+                if (startTime > 0L) putExtra("when", startTime)
+            }
         )
     }
 
