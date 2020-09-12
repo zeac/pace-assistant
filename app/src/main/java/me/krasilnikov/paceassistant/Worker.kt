@@ -191,6 +191,9 @@ object Worker {
                     Timber.tag(TAG).i(".onConnectionStateChanged: status = %d newState = %d", status, newState)
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
                         gatt.discoverServices()
+
+                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                        beatChannel.close()
                     }
                 }
 
