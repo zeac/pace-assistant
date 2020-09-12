@@ -332,33 +332,31 @@ object Worker {
         }
         val announcer = createAnnouncer(context, audioSessionId)
 
-        var lastTime = 0L
-        var lastHR = 0
+        var lastAnnounceTime = 0L
+        var lastAnnounceHR = 0 // Beats per 6 seconds.
         for (hr in vocalizeChannel) {
             require(threadCheck.isValid)
 
             val now = SystemClock.elapsedRealtime()
 
             val update = when {
-                lastTime == 0L -> true
-                now - lastTime > TimeUnit.SECONDS.toMillis(30) -> true
-                abs(lastHR - hr) > 7 -> true
+                lastAnnounceTime == 0L -> true
+                now - lastAnnounceTime > TimeUnit.SECONDS.toMillis(30) -> true
+                abs(lastAnnounceHR * 10 - hr) > 7 -> true
                 else -> false
             }
 
             if (update) {
-                val third = hr % 10
-                val second = ((hr / 10) % 10) + if (third > 5) 1 else 0
-                val first = (hr / 100) % 10
+                val sixsecond = hr / 10 + if ((hr % 10) > 5) 1 else 0
 
                 focusHelper.withFocus {
                     delay(200)
 
-                    announcer.say(first * 100 + second * 10)
+                    announcer.say(sixsecond)
                 }
 
-                lastHR = first * 100 + second * 10
-                lastTime = now
+                lastAnnounceHR = sixsecond
+                lastAnnounceTime = now
             }
         }
     }

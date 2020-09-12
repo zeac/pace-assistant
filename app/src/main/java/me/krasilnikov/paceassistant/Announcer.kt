@@ -42,19 +42,7 @@ class TTSAnnouncer(private val tts: TextToSpeech, audioSessionId: Int) : Announc
     }
 
     override suspend fun say(hr: Int) {
-        val first = (hr / 100) % 10
-        val second = (hr / 10) % 10
-
-        val text = if (first == 1 && second == 0) {
-            "100"
-        } else if (first == 1) {
-            "1 ${second}0"
-
-        } else if (first == 0) {
-            "${second}0"
-        } else {
-            "Something went wrong"
-        }
+        val text = "$hr"
 
         Timber.tag("Announcer").i("%d say with tts: %s", hr, text)
 

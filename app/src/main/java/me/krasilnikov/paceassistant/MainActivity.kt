@@ -197,7 +197,11 @@ class MainActivity : AppCompatActivity() {
         ) {
             Text(
                 fontSize = 96.sp,
-                text = "${state.beat}",
+                text = "${state.beat/10}.${state.beat%10}",
+                color = MaterialTheme.colors.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.beats_per_6_seconds),
                 color = MaterialTheme.colors.onSurface,
             )
             Text(
