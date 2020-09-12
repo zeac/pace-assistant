@@ -4,6 +4,7 @@
     <string name="voice_assist">Voice assist</string>
     <string name="connecting">Connecting…</string>
     <string name="give_permission">Give permission</string>
+    <string name="give_permission_desc">Bluetooth devices around you can be used to locate your location so a permission is required to find a heartbeat sensor.</string>
     <string name="no_bluetooth">No bluetooth available</string>
     <string name="enable_bluetooth">Enable bluetooth</string>
     <string name="stop">Stop</string>

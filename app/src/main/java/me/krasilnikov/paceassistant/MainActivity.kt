@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
@@ -120,7 +121,15 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun contentForState(state: State) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1.0f))
+            Box(
+                modifier = Modifier.weight(1.0f).fillMaxWidth(),
+                gravity = Alignment.BottomCenter,
+                padding = 32.dp,
+            ) {
+                when (state) {
+                    State.NoPermission -> noPermissionDescription()
+                }
+            }
 
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth(),
@@ -202,6 +211,14 @@ class MainActivity : AppCompatActivity() {
     private fun scanning() {
         Text(
             text = stringResource(R.string.connecting),
+            color = MaterialTheme.colors.onSurface,
+        )
+    }
+
+    @Composable
+    private fun noPermissionDescription() {
+        Text(
+            text = stringResource(R.string.give_permission_desc),
             color = MaterialTheme.colors.onSurface,
         )
     }
