@@ -32,6 +32,8 @@ android {
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders = [logProviderExported: "false"]
     }
 
     signingConfigs {
@@ -42,6 +44,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders = [logProviderExported: "true"]
+        }
+
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

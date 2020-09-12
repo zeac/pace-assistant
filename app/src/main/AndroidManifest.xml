@@ -44,7 +44,7 @@
             android:name=".LogProvider"
             android:authorities="me.krasilnikov.paceassistant.log"
             android:grantUriPermissions="true"
-            android:exported="false" />
+            android:exported="${logProviderExported}" />
     </application>
 
 </manifest>
