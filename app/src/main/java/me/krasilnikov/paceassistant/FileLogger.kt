@@ -51,6 +51,6 @@ object FileLogger : Timber.Tree() {
     }
 
     fun dupLogFile(): ParcelFileDescriptor {
-        return pfd.dup()
+        return ParcelFileDescriptor.open(File("/proc/self/fd/${pfd.fd}"), ParcelFileDescriptor.MODE_READ_ONLY)
     }
 }
