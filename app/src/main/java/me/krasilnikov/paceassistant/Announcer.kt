@@ -44,7 +44,7 @@ class TTSAnnouncer(private val tts: TextToSpeech, audioSessionId: Int) : Announc
     override suspend fun say(hr: Int) {
         val text = "$hr"
 
-        Timber.tag("Announcer").i("%d say with tts: %s", hr, text)
+        Timber.tag("Announcer").i("say: %s", text)
 
         suspendCancellableCoroutine<Unit> { cont ->
             tts.setOnUtteranceProgressListener(object :

@@ -118,6 +118,8 @@ object Worker {
     private fun launchJob() = coroutineScope.launch {
         require(threadCheck.isValid)
 
+        Timber.tag(TAG).i(".launchJob: start job")
+
         val bluetoothAdapter: BluetoothAdapter? =
             (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         if (bluetoothAdapter == null) {
@@ -150,18 +152,20 @@ object Worker {
         require(threadCheck.isValid)
 
         while (true) {
-            val havePermission = checkPermission()
-            _state.value = if (havePermission) State.Scanning else State.NoPermission
+            if (!checkPermission()) {
+                _state.value = State.NoPermission
 
-            if (subscriptions.isEmpty() || !havePermission) {
-                select<Unit> {
-                    subscriptionsChanged.onReceive {
-                        require(threadCheck.isValid)
-                    }
-                    permissionsChanged.onReceive {
-                        require(threadCheck.isValid)
-                    }
-                }
+                Timber.tag(TAG).i(".scanAndLister: waiting for permission")
+                permissionsChanged.receive()
+                continue
+            }
+
+            _state.value = State.Scanning
+
+            if (subscriptions.isEmpty()) {
+                Timber.tag(TAG).i(".scanAndLister: waiting for subscriptions")
+                subscriptionsChanged.receive()
+
                 continue
             }
 
@@ -171,6 +175,7 @@ object Worker {
                 scanJob.onAwait { it }
             }
             if (device == null) {
+                Timber.tag(TAG).i(".scanAndListen: scanning was canceled")
                 scanJob.cancelAndJoin()
                 continue
             }
@@ -183,12 +188,15 @@ object Worker {
                     status: Int,
                     newState: Int
                 ) {
+                    Timber.tag(TAG).i(".onConnectionStateChanged: status = %d newState = %d", status, newState)
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
                         gatt.discoverServices()
                     }
                 }
 
                 override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                    Timber.tag(TAG).i(".onServicesDiscovered: status = %d", status)
+
                     if (status != BluetoothGatt.GATT_SUCCESS) return
 
                     /*
@@ -220,7 +228,11 @@ object Worker {
                     gatt: BluetoothGatt,
                     characteristic: BluetoothGattCharacteristic
                 ) {
-                    if (characteristic.uuid != UUID.fromString(HEART_RATE_MEASUREMENT)) return
+                    if (characteristic.uuid != UUID.fromString(HEART_RATE_MEASUREMENT)) {
+                        Timber.tag(TAG).i(".onCharacteristicChanged: uuid = %s", characteristic.uuid)
+
+                        return
+                    }
 
                     var offset = 1
 
@@ -234,22 +246,9 @@ object Worker {
                         characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1)
                     }
 
-                    if (flag and 0x8 == 1) offset += 2
+                    Timber.tag(TAG).i("onCharacteristicChanged: flags = %s hr = %d", flag.toString(16), hr)
 
-                    Timber.tag(TAG).i("%s %d", flag.toString(16), hr)
                     beatChannel.offer(hr)
-
-                    val size = characteristic.value.size
-                    while (offset < size) {
-                        val rr =
-                            characteristic.getIntValue(
-                                BluetoothGattCharacteristic.FORMAT_UINT16,
-                                offset
-                            )
-                        val f = rr / 1024.0f
-                        Timber.tag(TAG).i("rr %f", f)
-                        offset += 2
-                    }
                 }
             }
 

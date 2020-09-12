@@ -17,6 +17,7 @@
 package me.krasilnikov.paceassistant
 
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import timber.log.Timber
 import java.io.File
 import java.io.OutputStreamWriter
@@ -41,6 +42,9 @@ object FileLogger : Timber.Tree() {
         get() = pfd.statSize
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+        val now = SystemClock.elapsedRealtime()/100
+        writer.write(now.toString())
+        writer.write(":")
         writer.write(priorities[priority.coerceIn(0, priorities.lastIndex)])
         writer.write(":")
         writer.write(tag ?: "NOTAG")

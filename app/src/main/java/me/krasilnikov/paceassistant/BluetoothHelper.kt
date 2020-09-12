@@ -39,7 +39,7 @@ class BluetoothHelper(private val context: Context) {
      * Suspend execution until bluetooth state changes to the given value.
      */
     suspend fun waitForChange(newState: Int) {
-        Timber.tag("BluetoothHelper").i(".waitForChange: %d", newState)
+        Timber.tag(TAG).i(".waitForChange: %d", newState)
 
         val stateChanged = Channel<Unit>(Channel.CONFLATED)
         val receiver = object : BroadcastReceiver() {
@@ -48,7 +48,7 @@ class BluetoothHelper(private val context: Context) {
 
                 val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
 
-                Timber.tag("BluetoothHelper").i(".waitForChange: bluetooth state had changed to %d", state)
+                Timber.tag(TAG).i(".waitForChange: bluetooth state had changed to %d", state)
 
                 if (state == newState) {
                     stateChanged.offer(Unit)
@@ -67,10 +67,14 @@ class BluetoothHelper(private val context: Context) {
     }
 
     suspend fun scanForFirst(scanner: BluetoothLeScanner, filter: ScanFilter): BluetoothDevice {
+        Timber.tag(TAG).i(".scanForFirst:")
+
         return suspendCancellableCoroutine { invocation ->
             val callback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult?) {
                     require(threadCheck.isValid)
+
+                    Timber.tag(TAG).i(".onScanResult: callbackType = %d %s", callbackType, result)
 
                     if (callbackType == ScanSettings.CALLBACK_TYPE_MATCH_LOST) return
                     if (result == null) return
@@ -94,5 +98,9 @@ class BluetoothHelper(private val context: Context) {
                 }
             }
         }
+    }
+
+    companion object {
+        const val TAG = "BluetoothHelper"
     }
 }
