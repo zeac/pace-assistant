@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.ui.tooling.preview.Devices
@@ -136,6 +137,7 @@ class MainActivity : AppCompatActivity() {
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth(),
                 gravity = Alignment.Center,
+                padding = 32.dp,
             ) {
                 when (state) {
                     State.NoBluetooth -> noBluetooth()
@@ -216,16 +218,18 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun scanning() {
         Text(
-            text = stringResource(R.string.connecting),
             color = MaterialTheme.colors.onSurface,
+            text = stringResource(R.string.connecting),
+            textAlign = TextAlign.Center,
         )
     }
 
     @Composable
     private fun noPermissionDescription() {
         Text(
-            text = stringResource(R.string.give_permission_desc),
             color = MaterialTheme.colors.onSurface,
+            text = stringResource(R.string.give_permission_desc),
+            textAlign = TextAlign.Center,
         )
     }
 
@@ -244,8 +248,9 @@ class MainActivity : AppCompatActivity() {
             }
         ) {
             Text(
-                text = stringResource(R.string.give_permission),
                 color = MaterialTheme.colors.onPrimary,
+                text = stringResource(R.string.give_permission),
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -253,8 +258,9 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun noBluetooth() {
         Text(
-            text = stringResource(R.string.no_bluetooth),
             color = MaterialTheme.colors.onSurface,
+            text = stringResource(R.string.no_bluetooth),
+            textAlign = TextAlign.Center,
         )
     }
 
@@ -264,8 +270,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }) {
             Text(
-                text = stringResource(R.string.enable_bluetooth),
                 color = MaterialTheme.colors.onPrimary,
+                text = stringResource(R.string.enable_bluetooth),
             )
         }
     }
