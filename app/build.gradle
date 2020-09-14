@@ -34,6 +34,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         manifestPlaceholders = [logProviderExported: "false"]
+
+        resConfig "en"
     }
 
     signingConfigs {
