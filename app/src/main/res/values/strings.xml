@@ -9,6 +9,7 @@
     <string name="enable_bluetooth">Enable bluetooth</string>
     <string name="stop">Stop</string>
     <string name="assisting">Assisting…</string>
+    <string name="assistant">Assistant</string>
     <string name="share_log">Share log</string>
     <string name="beats_per_6_seconds">Beats per 6 seconds</string>
 </resources>

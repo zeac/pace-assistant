@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        title = getString(R.string.app_name)
+
         setContent {
             PaceTheme {
                 val state by Worker.state.observeAsState()
