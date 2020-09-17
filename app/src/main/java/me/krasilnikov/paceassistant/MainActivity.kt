@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,
-            horizontalGravity = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 fontSize = 96.sp,
