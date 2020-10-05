@@ -28,13 +28,14 @@ import android.view.Menu
 import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.Box
 import androidx.compose.foundation.Text
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -125,9 +126,8 @@ class MainActivity : AppCompatActivity() {
     private fun contentForState(state: State) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
-                modifier = Modifier.weight(1.0f).fillMaxWidth(),
-                gravity = Alignment.BottomCenter,
-                padding = 32.dp,
+                modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
+                alignment = Alignment.BottomCenter,
             ) {
                 when (state) {
                     State.NoPermission -> noPermissionDescription()
@@ -135,9 +135,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             Box(
-                modifier = Modifier.weight(1.0f).fillMaxWidth(),
-                gravity = Alignment.Center,
-                padding = 32.dp,
+                modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
+                alignment = Alignment.Center,
             ) {
                 when (state) {
                     State.NoBluetooth -> noBluetooth()
@@ -151,7 +150,7 @@ class MainActivity : AppCompatActivity() {
 
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth(),
-                gravity = Alignment.Center,
+                alignment = Alignment.Center,
             ) {
                 if (state is State.Monitor || state is State.Assist) {
                     if (state is State.Assist && startTime.value > state.assistStartTime) {
@@ -201,7 +200,7 @@ class MainActivity : AppCompatActivity() {
         ) {
             Text(
                 fontSize = 96.sp,
-                text = "${state.beat/10}.${state.beat%10}",
+                text = "${state.beat / 10}.${state.beat % 10}",
                 color = MaterialTheme.colors.onSurface,
             )
             Text(
