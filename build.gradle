@@ -21,13 +21,13 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.0-alpha13'
+        classpath 'com.android.tools.build:gradle:4.2.0-alpha16'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 plugins {
-    id 'com.autonomousapps.dependency-analysis' version '0.57.0'
+    id 'com.autonomousapps.dependency-analysis' version '0.64.0'
 }
 
 allprojects {

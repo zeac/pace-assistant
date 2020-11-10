@@ -82,7 +82,7 @@ class ForegroundService : Service() {
                 setContentIntent(clickIntent)
                 addAction(stopAction)
                 setAllowSystemGeneratedContextualActions(false)
-                setSilent(true)
+                setNotificationSilent()
                 setOngoing(true)
                 setContentTitle(getString(R.string.assisting))
                 setSmallIcon(R.drawable.ic_launcher_foreground)
