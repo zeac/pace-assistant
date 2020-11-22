@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package me.krasilnikov.paceassistant
+package me.krasilnikov.paceassistant.bluetooth
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -29,6 +29,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
+import me.krasilnikov.paceassistant.ThreadChecker
 import timber.log.Timber
 import kotlin.coroutines.resume
 

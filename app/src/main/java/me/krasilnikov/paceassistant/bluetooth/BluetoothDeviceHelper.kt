@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package me.krasilnikov.paceassistant
+package me.krasilnikov.paceassistant.bluetooth
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -27,25 +27,10 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.AnyThread
 import kotlinx.coroutines.channels.Channel
+import me.krasilnikov.paceassistant.ThreadChecker
 import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
-
-interface CharacteristicDelegate<T> {
-
-    /**
-     * UUID of the Bluetooth GATT service containing the characteristic.
-     */
-    val service: UUID
-
-    /**
-     * UUID of the Bluetooth GATT characteristic to be notified about.
-     */
-    val characteristic: UUID
-
-    @AnyThread
-    fun parseValue(characteristic: BluetoothGattCharacteristic): T
-}
 
 class BluetoothDeviceHelper(
     private val context: Context,
