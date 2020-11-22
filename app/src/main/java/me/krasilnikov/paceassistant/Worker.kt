@@ -19,12 +19,8 @@ package me.krasilnikov.paceassistant
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanFilter
 import android.content.Context
@@ -34,6 +30,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.ParcelUuid
 import android.os.SystemClock
+import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
@@ -183,61 +180,13 @@ object Worker {
                 continue
             }
 
-            val beatChannel = Channel<Int>(CONFLATED)
+            val deviceHelper = BluetoothDeviceHelper(context, device)
+            val beatChannel = deviceHelper.subscribe(object : CharacteristicDelegate<Int> {
+                override val service = HEART_RATE_SERVICE
+                override val characteristic = HEART_RATE_MEASUREMENT
 
-            class GattCallback : BluetoothGattCallback() {
-                override fun onConnectionStateChange(
-                    gatt: BluetoothGatt,
-                    status: Int,
-                    newState: Int
-                ) {
-                    Timber.tag(TAG).i(".onConnectionStateChanged: status = %d newState = %d", status, newState)
-                    if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        gatt.discoverServices()
-
-                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                        beatChannel.close()
-                    }
-                }
-
-                override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                    Timber.tag(TAG).i(".onServicesDiscovered: status = %d", status)
-
-                    if (status != BluetoothGatt.GATT_SUCCESS) return
-
-                    /*
-                    gatt.getService(UUID.fromString(BATTERY_SERVICE))?.let { batteryService ->
-                        batteryService.getCharacteristic(UUID.fromString(BATTERY_CHARACTERISTIC))?.let { characteristic ->
-                            gatt.readCharacteristic(characteristic)
-                        }
-                    }
-                     */
-
-                    gatt.getService(HEART_RATE_SERVICE)?.let { heartRateService ->
-                        heartRateService.getCharacteristic(HEART_RATE_MEASUREMENT)
-                            ?.let { characteristic ->
-                                gatt.readCharacteristic(characteristic)
-
-                                gatt.setCharacteristicNotification(characteristic, true)
-                                characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIGURATION)?.let { descriptor ->
-                                    descriptor.value =
-                                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                                    gatt.writeDescriptor(descriptor)
-                                }
-                            }
-                    }
-                }
-
-                override fun onCharacteristicChanged(
-                    gatt: BluetoothGatt,
-                    characteristic: BluetoothGattCharacteristic
-                ) {
-                    if (characteristic.uuid != HEART_RATE_MEASUREMENT) {
-                        Timber.tag(TAG).i(".onCharacteristicChanged: uuid = %s", characteristic.uuid)
-
-                        return
-                    }
-
+                @AnyThread
+                override fun parseValue(characteristic: BluetoothGattCharacteristic): Int {
                     var offset = 1
 
                     val flag =
@@ -252,11 +201,11 @@ object Worker {
 
                     Timber.tag(TAG).i("onCharacteristicChanged: flags = %s hr = %d", flag.toString(16), hr)
 
-                    beatChannel.offer(hr)
+                    return hr
                 }
-            }
 
-            val gatt = device.connectGatt(context, false, GattCallback())
+            })
+
             try {
                 var startTime = 0L
                 var startTimeUTC = 0L
@@ -321,7 +270,8 @@ object Worker {
             } finally {
                 require(threadCheck.isValid)
 
-                gatt.close()
+                deviceHelper.close()
+                // gatt.close()
             }
         }
     }
@@ -398,8 +348,6 @@ object Worker {
     private fun stopForegroundService() {
         context.stopService(Intent(context, ForegroundService::class.java))
     }
-
-    private val CLIENT_CHARACTERISTIC_CONFIGURATION = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
     private val HEART_RATE_SERVICE = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
     private val HEART_RATE_MEASUREMENT = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
