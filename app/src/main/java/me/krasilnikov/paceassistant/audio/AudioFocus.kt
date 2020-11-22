@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package me.krasilnikov.paceassistant
+package me.krasilnikov.paceassistant.audio
 
 import android.annotation.TargetApi
 import android.content.Context
