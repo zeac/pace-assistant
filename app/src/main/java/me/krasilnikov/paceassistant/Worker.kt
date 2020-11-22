@@ -210,15 +210,13 @@ object Worker {
                     }
                      */
 
-                    gatt.getService(UUID.fromString(HEART_RATE_SERVICE))?.let { heartRateService ->
-                        heartRateService.getCharacteristic(UUID.fromString(HEART_RATE_MEASUREMENT))
+                    gatt.getService(HEART_RATE_SERVICE)?.let { heartRateService ->
+                        heartRateService.getCharacteristic(HEART_RATE_MEASUREMENT)
                             ?.let { characteristic ->
                                 gatt.readCharacteristic(characteristic)
 
                                 gatt.setCharacteristicNotification(characteristic, true)
-                                characteristic.getDescriptor(
-                                    UUID.fromString(CLIENT_CHARACTERISTIC_CONFIGURATION)
-                                )?.let { descriptor ->
+                                characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIGURATION)?.let { descriptor ->
                                     descriptor.value =
                                         BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                                     gatt.writeDescriptor(descriptor)
@@ -231,7 +229,7 @@ object Worker {
                     gatt: BluetoothGatt,
                     characteristic: BluetoothGattCharacteristic
                 ) {
-                    if (characteristic.uuid != UUID.fromString(HEART_RATE_MEASUREMENT)) {
+                    if (characteristic.uuid != HEART_RATE_MEASUREMENT) {
                         Timber.tag(TAG).i(".onCharacteristicChanged: uuid = %s", characteristic.uuid)
 
                         return
@@ -380,7 +378,7 @@ object Worker {
 
         val filter =
             ScanFilter.Builder()
-                .setServiceUuid(ParcelUuid.fromString(HEART_RATE_SERVICE))
+                .setServiceUuid(ParcelUuid(HEART_RATE_SERVICE))
                 .build()
         bluetoothHelper.scanForFirst(scanner, filter)
     }
@@ -398,13 +396,13 @@ object Worker {
         context.stopService(Intent(context, ForegroundService::class.java))
     }
 
-    const val CLIENT_CHARACTERISTIC_CONFIGURATION = "00002902-0000-1000-8000-00805f9b34fb"
+    private val CLIENT_CHARACTERISTIC_CONFIGURATION = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
-    const val HEART_RATE_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb"
-    const val HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb"
+    private val HEART_RATE_SERVICE = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
+    private val HEART_RATE_MEASUREMENT = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
 
-    const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
-    const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
+    private const val BATTERY_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
+    private const val BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
 
-    const val TAG = "Worker"
+    private const val TAG = "Worker"
 }
