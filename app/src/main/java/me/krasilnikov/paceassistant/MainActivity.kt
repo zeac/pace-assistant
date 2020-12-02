@@ -41,9 +41,11 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.onDispose
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
@@ -53,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 
 class MainActivity : AppCompatActivity() {
 
@@ -66,9 +70,15 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             PaceTheme {
-                val state by Worker.state.observeAsState()
+                val job = Job()
+                val coroutineContext = Dispatchers.Main.immediate + job
+                onDispose {
+                    job.cancel()
+                }
 
-                contentForState(state!!)
+                val state by Worker.state.collectAsState(context = coroutineContext)
+
+                contentForState(state)
             }
         }
     }

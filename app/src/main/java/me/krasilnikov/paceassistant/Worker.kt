@@ -34,7 +34,6 @@ import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +42,10 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
@@ -66,7 +69,7 @@ object Worker {
     private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
     private val bluetoothHelper = BluetoothHelper(context)
 
-    private val _state = MutableLiveData<State>()
+    private val _state = MutableStateFlow<State>(State.Scanning)
 
     private val subscriptions = mutableListOf<Any>()
     private val subscriptionsChanged = Channel<Unit>(CONFLATED)
@@ -81,14 +84,13 @@ object Worker {
         }
     }
 
-    val state: LiveData<State>
-        get() = _state
+    val state: StateFlow<State> = _state.asStateFlow()
 
     init {
         launchJob()
     }
 
-    fun subscribe(key: Any): AutoCloseable? {
+    fun subscribe(key: Any): AutoCloseable {
         subscriptions.add(key)
         subscriptionsChanged.offer(Unit)
 
