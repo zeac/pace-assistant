@@ -81,7 +81,7 @@ android {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    implementation 'androidx.activity:activity-ktx:1.2.0-beta01'
+    implementation 'androidx.activity:activity-ktx:1.2.0-beta02'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.compose.foundation:foundation-layout:1.0.0-alpha08'
     implementation 'androidx.compose.foundation:foundation:1.0.0-alpha08'
