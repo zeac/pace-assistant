@@ -51,10 +51,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.ui.tooling.preview.Devices
-import androidx.ui.tooling.preview.Preview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 
@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
-                alignment = Alignment.BottomCenter,
+                contentAlignment = Alignment.BottomCenter,
             ) {
                 when (state) {
                     State.NoPermission -> noPermissionDescription()
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
 
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
-                alignment = Alignment.Center,
+                contentAlignment = Alignment.Center,
             ) {
                 when (state) {
                     State.NoBluetooth -> noBluetooth()
@@ -160,7 +160,7 @@ class MainActivity : AppCompatActivity() {
 
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth(),
-                alignment = Alignment.Center,
+                contentAlignment = Alignment.Center,
             ) {
                 if (state is State.Monitor || state is State.Assist) {
                     if (state is State.Assist && startTime.value > state.assistStartTime) {
@@ -286,25 +286,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    @Preview(showDecoration = true, device = Devices.PIXEL_3)
+    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
     private fun showHeartbeatPreview() {
         contentForState(state = State.Assist(beat = 120, deviceName = "Polar H7", assistStartTime = 0L))
     }
 
     @Composable
-    @Preview(showDecoration = true, device = Devices.PIXEL_3)
+    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
     private fun scanningPreview() {
         contentForState(state = State.Scanning)
     }
 
     @Composable
-    @Preview(showDecoration = true, device = Devices.PIXEL_3)
+    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
     private fun noPermissionPreview() {
         contentForState(state = State.NoPermission)
     }
 
     @Composable
-    @Preview(showDecoration = true, device = Devices.PIXEL_3)
+    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
     private fun noBluetoothPreview() {
         contentForState(state = State.NoBluetooth)
     }
