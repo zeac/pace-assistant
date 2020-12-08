@@ -27,7 +27,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.autonomousapps.dependency-analysis' version '0.64.0'
+    id 'com.autonomousapps.dependency-analysis' version '0.69.0'
 }
 
 allprojects {
