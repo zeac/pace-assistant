@@ -16,6 +16,8 @@
 
 buildscript {
     ext.kotlin_version = "1.4.21"
+    ext.compose_version = "1.0.0-alpha09"
+
     repositories {
         google()
         jcenter()
