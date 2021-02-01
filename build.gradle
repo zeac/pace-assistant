@@ -15,8 +15,8 @@
  */
 
 buildscript {
-    ext.kotlin_version = "1.4.21"
-    ext.compose_version = "1.0.0-alpha09"
+    ext.kotlin_version = "1.4.21-2"
+    ext.compose_version = "1.0.0-alpha11"
 
     repositories {
         google()
