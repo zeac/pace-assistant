@@ -45,7 +45,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.selects.whileSelect
@@ -59,7 +58,6 @@ import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
-import kotlinx.coroutines.channels.onReceiveOrNull as onReceiveOrNullExt
 
 @MainThread
 object Worker {
@@ -80,7 +78,7 @@ object Worker {
 
     val assisting = MutableLiveData(true).apply {
         observeForever {
-            assistingChanged.offer(Unit)
+            assistingChanged.trySend(Unit).isSuccess
         }
     }
 
@@ -92,11 +90,11 @@ object Worker {
 
     fun subscribe(key: Any): AutoCloseable {
         subscriptions.add(key)
-        subscriptionsChanged.offer(Unit)
+        subscriptionsChanged.trySend(Unit).isSuccess
 
         return AutoCloseable {
             subscriptions.remove(key)
-            subscriptionsChanged.offer(Unit)
+            subscriptionsChanged.trySend(Unit).isSuccess
         }
     }
 
@@ -117,7 +115,7 @@ object Worker {
     fun updatePermission() {
         require(threadCheck.isValid)
 
-        permissionsChanged.offer(Unit)
+        permissionsChanged.trySend(Unit).isSuccess
     }
 
     private fun launchJob() = coroutineScope.launch {
@@ -226,7 +224,7 @@ object Worker {
 
                         _state.value = State.Assist(beat = hr, deviceName = device.name, assistStartTime = startTime)
 
-                        vocalizeChannel.offer(hr)
+                        vocalizeChannel.trySend(hr).isSuccess
                     } else {
                         startTime = 0L
 
@@ -260,11 +258,11 @@ object Worker {
                         subscriptions.isNotEmpty() || assisting.value == true
                     }
 
-                    beatChannel.onReceiveOrNullExt().invoke { hr ->
+                    beatChannel.onReceiveCatching { hr ->
                         require(threadCheck.isValid)
 
-                        if (hr != null) {
-                            updateState(hr)
+                        if (hr.isSuccess) {
+                            updateState(hr.getOrThrow())
 
                             true
                         } else {

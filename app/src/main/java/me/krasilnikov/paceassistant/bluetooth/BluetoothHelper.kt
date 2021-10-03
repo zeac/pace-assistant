@@ -52,7 +52,7 @@ class BluetoothHelper(private val context: Context) {
                 Timber.tag(TAG).i(".waitForChange: bluetooth state had changed to %d", state)
 
                 if (state == newState) {
-                    stateChanged.offer(Unit)
+                    stateChanged.trySend(Unit).isSuccess
                 }
             }
         }

@@ -66,7 +66,7 @@ class TTSAnnouncer(private val tts: TextToSpeech, audioSessionId: Int) : Announc
 
 suspend fun createAnnouncer(context: Context, audioSessionId: Int): Announcer {
     val ttsResultChannel = Channel<Int>(Channel.CONFLATED)
-    val tts = TextToSpeech(context) { result -> ttsResultChannel.offer(result) }
+    val tts = TextToSpeech(context) { result -> ttsResultChannel.trySend(result).isSuccess }
 
     if (ttsResultChannel.receive() == TextToSpeech.SUCCESS) {
         return TTSAnnouncer(tts, audioSessionId)

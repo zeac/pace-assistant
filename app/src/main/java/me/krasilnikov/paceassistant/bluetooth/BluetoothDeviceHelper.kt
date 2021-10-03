@@ -134,7 +134,7 @@ class BluetoothDeviceHelper(
         fun handleValue(characteristic: BluetoothGattCharacteristic) {
             val value = delegate.parseValue(characteristic)
 
-            channel.offer(value)
+            channel.trySend(value).isSuccess
         }
     }
 
