@@ -132,6 +132,7 @@ class MainActivity : AppCompatActivity() {
             ) {
                 when (state) {
                     State.NoPermission -> noPermissionDescription()
+                    else -> Unit
                 }
             }
 
