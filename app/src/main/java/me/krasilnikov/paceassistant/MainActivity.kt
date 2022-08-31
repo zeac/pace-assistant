@@ -17,6 +17,7 @@
 package me.krasilnikov.paceassistant
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.content.ClipData
 import android.content.Intent
@@ -240,12 +241,21 @@ class MainActivity : AppCompatActivity() {
             onClick = {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return@Button
 
-                requestPermissions(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                    ), 0
-                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    requestPermissions(
+                        arrayOf(
+                            Manifest.permission.BLUETOOTH_SCAN,
+                            Manifest.permission.BLUETOOTH_CONNECT,
+                        ), 0
+                    )
+                } else {
+                    requestPermissions(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ), 0
+                    )
+                }
             }
         ) {
             Text(
@@ -266,6 +276,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
+    @SuppressLint("MissingPermission")
     private fun bluetoothIsTurnedOff() {
         Button(onClick = {
             startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))

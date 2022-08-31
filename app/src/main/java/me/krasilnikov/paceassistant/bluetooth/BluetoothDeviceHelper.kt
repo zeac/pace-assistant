@@ -16,6 +16,7 @@
 
 package me.krasilnikov.paceassistant.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -32,6 +33,7 @@ import timber.log.Timber
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 
+@SuppressLint("MissingPermission")
 class BluetoothDeviceHelper(
     private val context: Context,
     private val device: BluetoothDevice,

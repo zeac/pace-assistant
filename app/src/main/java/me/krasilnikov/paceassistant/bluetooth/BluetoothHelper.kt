@@ -16,6 +16,7 @@
 
 package me.krasilnikov.paceassistant.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.BluetoothLeScanner
@@ -67,6 +68,7 @@ class BluetoothHelper(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     suspend fun scanForFirst(scanner: BluetoothLeScanner, filter: ScanFilter): BluetoothDevice {
         Timber.tag(TAG).i(".scanForFirst:")
 

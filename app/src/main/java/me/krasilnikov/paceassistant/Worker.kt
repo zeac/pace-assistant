@@ -17,6 +17,7 @@
 package me.krasilnikov.paceassistant
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic
@@ -25,7 +26,7 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanFilter
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.media.AudioManager
 import android.os.Build
 import android.os.ParcelUuid
@@ -134,6 +135,14 @@ object Worker {
         launchAnnouncer()
 
         while (true) {
+            if (!checkPermission()) {
+                _state.value = State.NoPermission
+
+                Timber.tag(TAG).i(".scanAndListen: waiting for permission")
+                permissionsChanged.receive()
+                continue
+            }
+
             if (!bluetoothAdapter.isEnabled) {
                 _state.value = State.BluetoothIsTurnedOff
 
@@ -155,18 +164,10 @@ object Worker {
         require(threadCheck.isValid)
 
         while (true) {
-            if (!checkPermission()) {
-                _state.value = State.NoPermission
-
-                Timber.tag(TAG).i(".scanAndLister: waiting for permission")
-                permissionsChanged.receive()
-                continue
-            }
-
             _state.value = State.Scanning
 
             if (subscriptions.isEmpty()) {
-                Timber.tag(TAG).i(".scanAndLister: waiting for subscriptions")
+                Timber.tag(TAG).i(".scanAndListen: waiting for subscriptions")
                 subscriptionsChanged.receive()
 
                 continue
@@ -222,12 +223,14 @@ object Worker {
                             startTimeUTC = System.currentTimeMillis()
                         }
 
+                        @SuppressLint("MissingPermission")
                         _state.value = State.Assist(beat = hr, deviceName = device.name, assistStartTime = startTime)
 
                         vocalizeChannel.trySend(hr).isSuccess
                     } else {
                         startTime = 0L
 
+                        @SuppressLint("MissingPermission")
                         _state.value = State.Monitor(beat = hr, deviceName = device.name)
                     }
                 }
@@ -322,8 +325,11 @@ object Worker {
     }
 
     private fun checkPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PERMISSION_GRANTED
+                    && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PERMISSION_GRANTED
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED
         } else {
             true
         }
