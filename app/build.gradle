@@ -20,7 +20,7 @@ plugins {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
 
     defaultConfig {
         applicationId "me.krasilnikov.paceassistant"
@@ -61,14 +61,13 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         allWarningsAsErrors = true
-        useIR = true
 
         freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
     }
@@ -78,7 +77,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "$compose_version"
+        kotlinCompilerExtensionVersion "$compose_compiler_version"
     }
 
     lintOptions {
@@ -96,11 +95,11 @@ android {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    implementation "androidx.activity:activity-compose:1.4.0"
-    implementation "androidx.activity:activity-ktx:1.4.0"
-    implementation "androidx.appcompat:appcompat:1.4.0"
-    implementation "androidx.core:core-ktx:1.7.0"
-    implementation "androidx.lifecycle:lifecycle-livedata-core-ktx:2.4.0"
+    implementation "androidx.activity:activity-compose:1.5.1"
+    implementation "androidx.activity:activity-ktx:1.5.1"
+    implementation "androidx.appcompat:appcompat:1.5.0"
+    implementation "androidx.core:core-ktx:1.8.0"
+    implementation "androidx.lifecycle:lifecycle-livedata-core-ktx:2.5.1"
 
     implementation "androidx.compose.foundation:foundation-layout:$compose_version"
     implementation "androidx.compose.foundation:foundation:$compose_version"
@@ -113,9 +112,9 @@ dependencies {
     implementation "androidx.compose.ui:ui-unit:$compose_version"
     implementation "androidx.compose.ui:ui:$compose_version"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.5.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
 
     implementation "com.jakewharton.timber:timber:4.7.1"
 }

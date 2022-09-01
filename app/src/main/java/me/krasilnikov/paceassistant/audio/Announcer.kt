@@ -56,6 +56,7 @@ class TTSAnnouncer(private val tts: TextToSpeech, audioSessionId: Int) : Announc
                     if (speakId == utteranceId) cont.resume(Unit)
                 }
 
+                @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String) {
                 }
             })
