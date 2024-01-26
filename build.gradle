@@ -15,7 +15,7 @@
  */
 
 buildscript {
-    ext.kotlin_version = "1.9.0"
+    ext.kotlin_version = "1.9.22"
 
     repositories {
         google()
@@ -28,7 +28,7 @@ buildscript {
 }
 
 plugins {
-    id "com.autonomousapps.dependency-analysis" version "1.21.0"
+    id "com.autonomousapps.dependency-analysis" version "1.29.0"
 }
 
 dependencyAnalysis {
