@@ -234,7 +234,7 @@ object Worker {
                         startTime = 0L
 
                         @SuppressLint("MissingPermission")
-                        _state.value = State.Monitor(beat = hr, deviceName = device.name)
+                        _state.value = State.Monitor(beat = hr, deviceName = device.name ?: "")
                     }
                 }
 

@@ -16,9 +16,6 @@
 
 package me.krasilnikov.paceassistant
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
 import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
@@ -28,37 +25,23 @@ import android.os.SystemClock
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Switch
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableLongStateOf
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ActivityResultCallback<Map<String, Boolean>> {
 
-    private val startTime = mutableStateOf(0L)
+    private val permissionRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+        this,
+    )
+
+    private val startTime = mutableLongStateOf(0L)
     private var subscription: AutoCloseable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,8 +52,16 @@ class MainActivity : AppCompatActivity() {
         setContent {
             PaceTheme {
                 val state by Worker.state.collectAsState()
+                val assisting by Worker.assisting.observeAsState(Worker.assisting.value!!)
 
-                ContentForState(state)
+                ContentForState(
+                    permissionRequestLauncher = permissionRequestLauncher,
+                    state = state,
+                    startTime = startTime.longValue,
+                    assisting = assisting,
+                    onStopClicked = { Worker.stop(true) },
+                    onAssistingChanged = { Worker.assisting.value = it },
+                )
             }
         }
     }
@@ -102,8 +93,13 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        startTime.value = SystemClock.elapsedRealtime()
+        startTime.longValue = SystemClock.elapsedRealtime()
         subscription = Worker.subscribe(this)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onActivityResult(result: Map<String, Boolean>) {
+        Worker.updatePermission()
     }
 
     override fun onStop() {
@@ -111,204 +107,5 @@ class MainActivity : AppCompatActivity() {
 
         subscription?.close()
         subscription = null
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        Worker.updatePermission()
-    }
-
-    @Composable
-    private fun ContentForState(state: State) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                when (state) {
-                    State.NoPermission -> NoPermissionDescription()
-                    else -> Unit
-                }
-            }
-
-            Box(
-                modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                when (state) {
-                    State.NoBluetooth -> NoBluetooth()
-                    State.BluetoothIsTurnedOff -> BluetoothIsTurnedOff()
-                    State.NoPermission -> NoPermission()
-                    State.Scanning -> Scanning()
-                    is State.Monitor -> ShowHeartbeat(state)
-                    is State.Assist -> ShowHeartbeat(state)
-                }
-            }
-
-            Box(
-                modifier = Modifier.weight(1.0f).fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (state is State.Monitor || state is State.Assist) {
-                    if (state is State.Assist && startTime.value > state.assistStartTime) {
-                        StopButton()
-                    } else {
-                        AssistantControl()
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun StopButton() {
-        Button(onClick = { Worker.stop(true) }) {
-            Text(text = stringResource(R.string.stop_assist))
-        }
-    }
-
-    @Composable
-    private fun AssistantControl() {
-        val assisting by Worker.assisting.observeAsState(Worker.assisting.value!!)
-
-        Row(
-            modifier = Modifier.toggleable(value = assisting, onValueChange = {
-                Worker.assisting.value = it
-            })
-        ) {
-
-            Text(
-                text = stringResource(R.string.voice_assist),
-                color = MaterialTheme.colors.onSurface,
-            )
-
-            Switch(checked = assisting, onCheckedChange = {
-                Worker.assisting.value = it
-            })
-        }
-    }
-
-    @Composable
-    private fun ShowHeartbeat(state: HeartbeatState) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                fontSize = 96.sp,
-                text = "${state.beat / 10}.${state.beat % 10}",
-                color = MaterialTheme.colors.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.beats_per_6_seconds),
-                color = MaterialTheme.colors.onSurface,
-            )
-            Text(
-                text = state.deviceName,
-                color = MaterialTheme.colors.onSurface,
-            )
-        }
-    }
-
-    @Composable
-    private fun Scanning() {
-        Text(
-            color = MaterialTheme.colors.onSurface,
-            text = stringResource(R.string.connecting),
-            textAlign = TextAlign.Center,
-        )
-    }
-
-    @Composable
-    private fun NoPermissionDescription() {
-        Text(
-            color = MaterialTheme.colors.onSurface,
-            text = stringResource(R.string.give_permission_desc),
-            textAlign = TextAlign.Center,
-        )
-    }
-
-    @Composable
-    private fun NoPermission() {
-        Button(
-            onClick = {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return@Button
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    requestPermissions(
-                        arrayOf(
-                            Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                        ), 0
-                    )
-                } else {
-                    requestPermissions(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ), 0
-                    )
-                }
-            }
-        ) {
-            Text(
-                color = MaterialTheme.colors.onPrimary,
-                text = stringResource(R.string.give_permission),
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-
-    @Composable
-    private fun NoBluetooth() {
-        Text(
-            color = MaterialTheme.colors.onSurface,
-            text = stringResource(R.string.no_bluetooth),
-            textAlign = TextAlign.Center,
-        )
-    }
-
-    @Composable
-    @SuppressLint("MissingPermission")
-    private fun BluetoothIsTurnedOff() {
-        Button(onClick = {
-            startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-        }) {
-            Text(
-                color = MaterialTheme.colors.onPrimary,
-                text = stringResource(R.string.enable_bluetooth),
-            )
-        }
-    }
-
-    @Composable
-    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun ShowHeartbeatPreview() {
-        ContentForState(state = State.Assist(beat = 120, deviceName = "Polar H7", assistStartTime = 0L))
-    }
-
-    @Composable
-    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun ScanningPreview() {
-        ContentForState(state = State.Scanning)
-    }
-
-    @Composable
-    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun NoPermissionPreview() {
-        ContentForState(state = State.NoPermission)
-    }
-
-    @Composable
-    @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun NoBluetoothPreview() {
-        ContentForState(state = State.NoBluetooth)
     }
 }
