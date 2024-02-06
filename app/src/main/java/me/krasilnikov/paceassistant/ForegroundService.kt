@@ -35,7 +35,7 @@ class ForegroundService : Service() {
             Intent(this, ForegroundService::class.java).apply {
                 action = "stop"
             },
-            PendingIntent.FLAG_UPDATE_CURRENT,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 
@@ -44,7 +44,7 @@ class ForegroundService : Service() {
             this,
             0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 

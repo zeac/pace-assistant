@@ -21,6 +21,7 @@
         android:usesPermissionFlags="neverForLocation" />
 
     <uses-permission-sdk-23 android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission-sdk-23 android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <queries>
         <intent>
