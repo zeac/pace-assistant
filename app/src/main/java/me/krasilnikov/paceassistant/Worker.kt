@@ -38,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -60,12 +61,14 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @MainThread
 object Worker {
 
     private val context = PaceApplication.instance
     private val threadCheck = ThreadChecker()
     private val coroutineScope = CoroutineScope(Dispatchers.Main.immediate)
+    @SuppressLint("StaticFieldLeak")
     private val bluetoothHelper = BluetoothHelper(context)
 
     private val _state = MutableStateFlow<State>(State.Scanning)
@@ -224,7 +227,7 @@ object Worker {
                         }
 
                         @SuppressLint("MissingPermission")
-                        _state.value = State.Assist(beat = hr, deviceName = device.name, assistStartTime = startTime)
+                        _state.value = State.Assist(beat = hr, deviceName = device.name ?: "", assistStartTime = startTime)
 
                         vocalizeChannel.trySend(hr).isSuccess
                     } else {
