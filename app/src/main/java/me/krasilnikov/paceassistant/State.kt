@@ -32,22 +32,22 @@ sealed class State {
     /**
      * The phone have no bluetooth at all.
      */
-    object NoBluetooth : State()
+    data object NoBluetooth : State()
 
     /**
      * Bluetooth adapter is available but it is turned off.
      */
-    object BluetoothIsTurnedOff : State()
+    data object BluetoothIsTurnedOff : State()
 
     /**
      * No location permission is granted.
      */
-    object NoPermission : State()
+    data object NoPermission : State()
 
     /**
      * A scanning in progress.
      */
-    object Scanning : State()
+    data object Scanning : State()
 
     /**
      * Heartbeat sensor is connected, but the assistant is disabled.

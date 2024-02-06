@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             PaceTheme {
                 val state by Worker.state.collectAsState()
 
-                contentForState(state)
+                ContentForState(state)
             }
         }
     }
@@ -125,14 +125,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun contentForState(state: State) {
+    private fun ContentForState(state: State) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.weight(1.0f).fillMaxWidth().padding(32.dp),
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 when (state) {
-                    State.NoPermission -> noPermissionDescription()
+                    State.NoPermission -> NoPermissionDescription()
                     else -> Unit
                 }
             }
@@ -142,12 +142,12 @@ class MainActivity : AppCompatActivity() {
                 contentAlignment = Alignment.Center,
             ) {
                 when (state) {
-                    State.NoBluetooth -> noBluetooth()
-                    State.BluetoothIsTurnedOff -> bluetoothIsTurnedOff()
-                    State.NoPermission -> noPermission()
-                    State.Scanning -> scanning()
-                    is State.Monitor -> showHeartbeat(state)
-                    is State.Assist -> showHeartbeat(state)
+                    State.NoBluetooth -> NoBluetooth()
+                    State.BluetoothIsTurnedOff -> BluetoothIsTurnedOff()
+                    State.NoPermission -> NoPermission()
+                    State.Scanning -> Scanning()
+                    is State.Monitor -> ShowHeartbeat(state)
+                    is State.Assist -> ShowHeartbeat(state)
                 }
             }
 
@@ -157,9 +157,9 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (state is State.Monitor || state is State.Assist) {
                     if (state is State.Assist && startTime.value > state.assistStartTime) {
-                        stopButton()
+                        StopButton()
                     } else {
-                        assistantControl()
+                        AssistantControl()
                     }
                 }
             }
@@ -167,14 +167,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun stopButton() {
+    private fun StopButton() {
         Button(onClick = { Worker.stop(true) }) {
             Text(text = stringResource(R.string.stop_assist))
         }
     }
 
     @Composable
-    private fun assistantControl() {
+    private fun AssistantControl() {
         val assisting by Worker.assisting.observeAsState(Worker.assisting.value!!)
 
         Row(
@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun showHeartbeat(state: HeartbeatState) {
+    private fun ShowHeartbeat(state: HeartbeatState) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,
@@ -218,7 +218,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun scanning() {
+    private fun Scanning() {
         Text(
             color = MaterialTheme.colors.onSurface,
             text = stringResource(R.string.connecting),
@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun noPermissionDescription() {
+    private fun NoPermissionDescription() {
         Text(
             color = MaterialTheme.colors.onSurface,
             text = stringResource(R.string.give_permission_desc),
@@ -236,12 +236,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun noPermission() {
+    private fun NoPermission() {
         Button(
             onClick = {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return@Button
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     requestPermissions(
                         arrayOf(
                             Manifest.permission.BLUETOOTH_SCAN,
@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun noBluetooth() {
+    private fun NoBluetooth() {
         Text(
             color = MaterialTheme.colors.onSurface,
             text = stringResource(R.string.no_bluetooth),
@@ -277,7 +277,7 @@ class MainActivity : AppCompatActivity() {
 
     @Composable
     @SuppressLint("MissingPermission")
-    private fun bluetoothIsTurnedOff() {
+    private fun BluetoothIsTurnedOff() {
         Button(onClick = {
             startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         }) {
@@ -290,25 +290,25 @@ class MainActivity : AppCompatActivity() {
 
     @Composable
     @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun showHeartbeatPreview() {
-        contentForState(state = State.Assist(beat = 120, deviceName = "Polar H7", assistStartTime = 0L))
+    private fun ShowHeartbeatPreview() {
+        ContentForState(state = State.Assist(beat = 120, deviceName = "Polar H7", assistStartTime = 0L))
     }
 
     @Composable
     @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun scanningPreview() {
-        contentForState(state = State.Scanning)
+    private fun ScanningPreview() {
+        ContentForState(state = State.Scanning)
     }
 
     @Composable
     @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun noPermissionPreview() {
-        contentForState(state = State.NoPermission)
+    private fun NoPermissionPreview() {
+        ContentForState(state = State.NoPermission)
     }
 
     @Composable
     @Preview(showSystemUi = true, device = Devices.PIXEL_3)
-    private fun noBluetoothPreview() {
-        contentForState(state = State.NoBluetooth)
+    private fun NoBluetoothPreview() {
+        ContentForState(state = State.NoBluetooth)
     }
 }
